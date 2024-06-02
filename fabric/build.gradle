@@ -35,6 +35,9 @@ dependencies {
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionFabric')
+
+    // If you write entrypoint in Scala. If entrypoint is Java, you can use default(fabric) entrypoint loader.
+    modImplementation("com.kotori316:scalable-cats-force-fabric:2.0.0:dev")
 }
 
 processResources {

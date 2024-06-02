@@ -1,4 +1,5 @@
 plugins {
+    id 'scala'
     id 'dev.architectury.loom' version '1.6-SNAPSHOT' apply false
     id 'architectury-plugin' version '3.4-SNAPSHOT'
     id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
@@ -14,6 +15,7 @@ allprojects {
 }
 
 subprojects {
+    apply plugin: 'scala'
     apply plugin: 'dev.architectury.loom'
     apply plugin: 'architectury-plugin'
     apply plugin: 'maven-publish'
@@ -29,11 +31,33 @@ subprojects {
         // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
         // See https://docs.gradle.org/current/userguide/declaring_repositories.html
         // for more information about repositories.
+        
+        maven {
+            name = "Azure-SLP"
+            url = uri("https://pkgs.dev.azure.com/Kotori316/minecraft/_packaging/mods/maven/v1")
+            content {
+                includeGroup("com.kotori316")
+                includeGroup("org.typelevel")
+            }
+        }
+        // Put repositories for dependencies here
+        // ForgeGradle automatically adds the Forge maven and Maven Central for you
+
+        // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
+        // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
+        // flatDir {
+        //     dir 'libs'
+        // }
     }
 
     dependencies {
         minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
         mappings "net.fabricmc:yarn:$rootProject.yarn_mappings:v2"
+
+        
+        compileOnly(group: 'org.scala-lang', name: 'scala3-library_3', version: rootProject.scala_version)
+        // Add if you need this library. I use a modified version of Cats to avoid some module errors.
+        compileOnly(group: 'org.typelevel', name: 'cats-core_3', version: rootProject.cats_version)
     }
 
     java {
@@ -42,13 +66,20 @@ subprojects {
         // If you remove this line, sources will not be generated.
         withSourcesJar()
 
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     tasks.withType(JavaCompile).configureEach {
-        it.options.release = 17
+        it.options.release = 21
     }
+
+    // Disable incremental compilation
+    // tasks.withType(ScalaCompile) {
+    //     scalaCompileOptions.with {
+    //         force = true
+    //     }
+    // }
 
     // Configure Maven publishing.
     publishing {

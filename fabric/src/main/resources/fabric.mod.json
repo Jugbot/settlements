@@ -16,10 +16,14 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "io.github.jugbot.fabric.ExampleModFabric"
+      {
+        "value":"io.github.jugbot.fabric.ExampleModFabric"
+      }
     ],
     "client": [
-      "io.github.jugbot.fabric.client.ExampleModFabricClient"
+      {
+        "value":"io.github.jugbot.fabric.client.ExampleModFabricClient"
+      }
     ]
   },
   "mixins": [
@@ -28,11 +32,14 @@
   "depends": {
     "fabricloader": ">=0.15.11",
     "minecraft": "~1.20.1",
-    "java": ">=17",
+    "java": ">=21",
     "architectury": ">=9.2.14",
     "fabric-api": "*"
   },
   "suggests": {
     "another-mod": "*"
+  },
+  "requires": {
+    "kotori_scala": ">=1.0.0"
   }
 }

@@ -1,5 +1,6 @@
 plugins {
     id 'com.github.johnrengelman.shadow'
+    id 'scala'
 }
 
 loom {
@@ -38,6 +39,12 @@ dependencies {
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionForge')
+
+    // The language loader. You can put the jar to the mods dir instead of declaring in `build.gradle.kts`.
+    // This file is needed as the scala library will not be loaded in dev environment due to change of classpath by Forge.
+    runtimeOnly(group: "com.kotori316", name: "ScalableCatsForce".toLowerCase(), version: "3.3.3-build-6", classifier: "with-library") {
+        transitive(false)
+    }
 }
 
 processResources {

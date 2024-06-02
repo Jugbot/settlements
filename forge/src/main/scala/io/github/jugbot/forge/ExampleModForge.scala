@@ -7,8 +7,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import io.github.jugbot.ExampleMod;
 
 @Mod(ExampleMod.MOD_ID)
-public final class ExampleModForge {
-    public ExampleModForge() {
+object ExampleModForge {
+    {
         // Submit our event bus to let Architectury API register our content on the right time.
         EventBuses.registerModEventBus(ExampleMod.MOD_ID, FMLJavaModLoadingContext.get().getModEventBus());
 
