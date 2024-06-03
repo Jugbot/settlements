@@ -7,7 +7,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'example_mod'
+rootProject.name = 'settlements'
 
 include 'common'
 include 'fabric'
