@@ -12,6 +12,6 @@ class ExampleModFabric extends ModInitializer {
         // Proceed with mild caution.
 
         // Run our common setup.
-        Mod.init();
+        Mod.initialize();
     }
 }

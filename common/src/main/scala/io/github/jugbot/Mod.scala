@@ -1,21 +1,21 @@
 package io.github.jugbot;
 
-import org.apache.logging.log4j.LogManager
-import net.fabricmc.api.Environment;
-import net.fabricmc.api.EnvType;
-import dev.architectury.registry.client.level.entity.EntityRendererRegistry
-import io.github.jugbot.registry.Registries
-import net.minecraft.client.renderer.entity.CowRenderer
-import io.github.jugbot.render.FaeRenderer
 import dev.architectury.registry.client.level.entity.EntityModelLayerRegistry
+import dev.architectury.registry.client.level.entity.EntityRendererRegistry
 import io.github.jugbot.model.FaeEntityModel
+import io.github.jugbot.registry.Registries
+import io.github.jugbot.render.FaeRenderer
+import net.fabricmc.api.EnvType
+import net.fabricmc.api.Environment
+import net.minecraft.client.renderer.entity.CowRenderer
+import org.apache.logging.log4j.LogManager
 
 object Mod {
     final val MOD_ID = "settlements";
 
     private val LOGGER = LogManager.getLogger
 
-    def init() = {
+    def initialize() = {
         LOGGER.info("Hello World!")
         Registries.initialize()
     }
