@@ -8,6 +8,7 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.client.model.geom.ModelLayers
 import net.minecraft.client.renderer.entity.EntityRenderer
 import net.minecraft.client.renderer.entity.LivingEntityRenderer
+import io.github.jugbot.Mod
 
 class FaeRenderer(context: EntityRendererProvider.Context)
     extends LivingEntityRenderer[FaeEntity, FaeEntityModel](
@@ -22,5 +23,5 @@ class FaeRenderer(context: EntityRendererProvider.Context)
   }
 
 object FaeRenderer {
-  val FAE_LOCATION: ResourceLocation = new ResourceLocation("textures/entity/fae/fae.png");
+  val FAE_LOCATION: ResourceLocation = new ResourceLocation(Mod.MOD_ID, "textures/entity/fae/fae.png");
 }

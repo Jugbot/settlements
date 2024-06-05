@@ -7,8 +7,10 @@ import dev.architectury.registry.client.level.entity.EntityRendererRegistry
 import io.github.jugbot.registry.Registries
 import net.minecraft.client.renderer.entity.CowRenderer
 import io.github.jugbot.render.FaeRenderer
+import dev.architectury.registry.client.level.entity.EntityModelLayerRegistry
+import io.github.jugbot.model.FaeEntityModel
 
-object ExampleMod {
+object Mod {
     final val MOD_ID = "settlements";
 
     private val LOGGER = LogManager.getLogger
@@ -22,7 +24,8 @@ object ExampleMod {
     object Client {
         @Environment(EnvType.CLIENT)
         def initializeClient(): Unit = {
-            EntityRendererRegistry.register(Registries.FAE_ENTITY, FaeRenderer.apply(_));
+            EntityModelLayerRegistry.register(FaeEntityModel.LAYER_LOCATION, FaeEntityModel.createBodyLayer _)
+            EntityRendererRegistry.register(Registries.FAE_ENTITY, new FaeRenderer(_));
         }
     }
 }

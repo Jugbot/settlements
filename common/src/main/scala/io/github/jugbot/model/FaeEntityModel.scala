@@ -14,19 +14,10 @@ import net.minecraft.client.model.geom.builders.CubeDeformation
 import net.minecraft.world.entity.Entity
 import com.mojang.blaze3d.vertex.VertexConsumer
 import com.mojang.blaze3d.vertex.PoseStack
-import io.github.jugbot.ExampleMod
+import io.github.jugbot.Mod
 
 class FaeEntityModel(root: ModelPart) extends EntityModel[FaeEntity] {
 	final val bb_main: ModelPart = root.getChild("bb_main");
-
-	def createBodyLayer(): LayerDefinition = {
-		val meshdefinition: MeshDefinition = new MeshDefinition();
-		val partdefinition: PartDefinition = meshdefinition.getRoot();
-
-		val bb_main: PartDefinition = partdefinition.addOrReplaceChild("bb_main", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F, -8.0F, 16.0F, 16.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 24.0F, 0.0F));
-
-		return LayerDefinition.create(meshdefinition, 64, 64);
-	}
 
 	override def setupAnim(entity: FaeEntity, f: Float, g: Float, h: Float, i: Float, j: Float): Unit = {}
 
@@ -36,5 +27,14 @@ class FaeEntityModel(root: ModelPart) extends EntityModel[FaeEntity] {
 }
 
 object FaeEntityModel {
-	final val LAYER_LOCATION: ModelLayerLocation = new ModelLayerLocation(new ResourceLocation(ExampleMod.MOD_ID, "fae"), "main");
+	final val LAYER_LOCATION: ModelLayerLocation = new ModelLayerLocation(new ResourceLocation(Mod.MOD_ID, "fae"), "main");
+
+	def createBodyLayer(): LayerDefinition = {
+		val meshdefinition: MeshDefinition = new MeshDefinition();
+		val partdefinition: PartDefinition = meshdefinition.getRoot();
+
+		val bb_main: PartDefinition = partdefinition.addOrReplaceChild("bb_main", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F, -8.0F, 16.0F, 16.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 24.0F, 0.0F));
+
+		return LayerDefinition.create(meshdefinition, 64, 64);
+	}
 }

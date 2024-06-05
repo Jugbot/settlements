@@ -2,7 +2,7 @@ package io.github.jugbot.fabric;
 
 import net.fabricmc.api.ModInitializer;
 
-import io.github.jugbot.ExampleMod;
+import io.github.jugbot.Mod;
 
 
 class ExampleModFabric extends ModInitializer {
@@ -12,6 +12,6 @@ class ExampleModFabric extends ModInitializer {
         // Proceed with mild caution.
 
         // Run our common setup.
-        ExampleMod.init();
+        Mod.init();
     }
 }

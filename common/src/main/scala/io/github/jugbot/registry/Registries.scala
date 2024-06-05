@@ -1,7 +1,7 @@
 package io.github.jugbot.registry
 
 import dev.architectury.registry.registries.DeferredRegister
-import io.github.jugbot.ExampleMod
+import io.github.jugbot.Mod
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry
 import dev.architectury.registry.registries.RegistrySupplier
 import io.github.jugbot.entity.FaeEntity
@@ -12,7 +12,7 @@ import dev.architectury.registry.level.entity.EntityAttributeRegistry
 object Registries {
   final val ENTITY_TYPES: DeferredRegister[EntityType[?]] =
     DeferredRegister.create(
-      ExampleMod.MOD_ID,
+      Mod.MOD_ID,
       net.minecraft.core.registries.Registries.ENTITY_TYPE
     );
 
