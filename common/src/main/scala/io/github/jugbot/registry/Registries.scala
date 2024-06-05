@@ -7,6 +7,7 @@ import dev.architectury.registry.registries.RegistrySupplier
 import io.github.jugbot.entity.FaeEntity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.core.Registry
+import dev.architectury.registry.level.entity.EntityAttributeRegistry
 
 object Registries {
   final val ENTITY_TYPES: DeferredRegister[EntityType[?]] =
@@ -19,5 +20,6 @@ object Registries {
 
   def initialize() = {
     ENTITY_TYPES.register();
+    EntityAttributeRegistry.register(FAE_ENTITY, FaeEntity.createAttributes _);
   }
 }

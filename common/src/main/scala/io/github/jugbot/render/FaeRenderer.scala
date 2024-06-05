@@ -6,9 +6,11 @@ import net.minecraft.client.renderer.entity.MobRenderer
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.client.model.geom.ModelLayers
+import net.minecraft.client.renderer.entity.EntityRenderer
+import net.minecraft.client.renderer.entity.LivingEntityRenderer
 
 class FaeRenderer(context: EntityRendererProvider.Context)
-    extends MobRenderer[FaeEntity, FaeEntityModel](
+    extends LivingEntityRenderer[FaeEntity, FaeEntityModel](
       context,
       new FaeEntityModel(context.bakeLayer(FaeEntityModel.LAYER_LOCATION)),
       0.5f
