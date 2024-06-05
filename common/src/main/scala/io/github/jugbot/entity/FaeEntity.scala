@@ -15,6 +15,9 @@ import java.lang
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
 import java.{util => ju}
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LightningBolt
+import net.minecraft.server.level.ServerLevel
 
 class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level)
     extends LivingEntity(entityType, world) {
@@ -26,6 +29,14 @@ class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level)
   override def setItemSlot(equipmentSlot: EquipmentSlot, itemStack: ItemStack): Unit = {}
 
   override def getMainArm(): HumanoidArm = HumanoidArm.RIGHT
+
+  override def isPushable(): Boolean = false
+
+  override def doPush(entity: Entity) = {}
+
+  override def attackable(): Boolean = false
+
+  override def isEffectiveAi(): Boolean = false
 }
 
 object FaeEntity {

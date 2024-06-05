@@ -13,6 +13,6 @@ object ExampleModForge {
         EventBuses.registerModEventBus(Mod.MOD_ID, FMLJavaModLoadingContext.get().getModEventBus());
 
         // Run our common setup.
-        Mod.init();
+        Mod.initialize();
     }
 }
