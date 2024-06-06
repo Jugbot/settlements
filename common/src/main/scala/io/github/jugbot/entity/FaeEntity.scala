@@ -24,9 +24,13 @@ class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level)
 
   override def getArmorSlots(): java.lang.Iterable[ItemStack] = ju.List.of()
 
-  override def getItemBySlot(equipmentSlot: EquipmentSlot): ItemStack = ItemStack.EMPTY
+  override def getItemBySlot(equipmentSlot: EquipmentSlot): ItemStack =
+    ItemStack.EMPTY
 
-  override def setItemSlot(equipmentSlot: EquipmentSlot, itemStack: ItemStack): Unit = {}
+  override def setItemSlot(
+      equipmentSlot: EquipmentSlot,
+      itemStack: ItemStack
+  ): Unit = {}
 
   override def getMainArm(): HumanoidArm = HumanoidArm.RIGHT
 
@@ -48,6 +52,9 @@ object FaeEntity {
   );
 
   def createAttributes(): AttributeSupplier.Builder = {
-    LivingEntity.createLivingAttributes().add(Attributes.MAX_HEALTH, 10.0).add(Attributes.MOVEMENT_SPEED, 0.2f);
+    LivingEntity
+      .createLivingAttributes()
+      .add(Attributes.MAX_HEALTH, 10.0)
+      .add(Attributes.MOVEMENT_SPEED, 0.2f);
   }
 }

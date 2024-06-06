@@ -9,7 +9,7 @@ import io.github.jugbot.render.FaeRenderer
 import io.github.jugbot.Mod
 
 final class ExampleModFabricClient extends ClientModInitializer {
-    override def onInitializeClient(): Unit = {
-      Mod.Client.initializeClient()
-    }
+  override def onInitializeClient(): Unit = {
+    Mod.Client.initializeClient()
+  }
 }

@@ -3,6 +3,7 @@ plugins {
     id 'dev.architectury.loom' version '1.6-SNAPSHOT' apply false
     id 'architectury-plugin' version '3.4-SNAPSHOT'
     id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
+    id "com.diffplug.spotless" version "6.25.0"
 }
 
 architectury {
@@ -97,5 +98,13 @@ subprojects {
             // The repositories here will be used for publishing your artifact, not for
             // retrieving dependencies.
         }
+    }
+}
+
+spotless {
+    scala {
+        target '*/src/*/scala/**/*.scala'
+        // version and configFile, scalaMajorVersion are all optional
+        scalafmt('3.7.15').configFile('.scalafmt.conf')
     }
 }

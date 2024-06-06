@@ -16,7 +16,8 @@ object Registries {
       net.minecraft.core.registries.Registries.ENTITY_TYPE
     );
 
-  final val FAE_ENTITY: RegistrySupplier[EntityType[FaeEntity]] = ENTITY_TYPES.register("fae", FaeEntity.TYPE)
+  final val FAE_ENTITY: RegistrySupplier[EntityType[FaeEntity]] =
+    ENTITY_TYPES.register("fae", FaeEntity.TYPE)
 
   def initialize() = {
     ENTITY_TYPES.register();

@@ -17,24 +17,65 @@ import com.mojang.blaze3d.vertex.PoseStack
 import io.github.jugbot.Mod
 
 class FaeEntityModel(root: ModelPart) extends EntityModel[FaeEntity] {
-	final val bb_main: ModelPart = root.getChild("bb_main");
+  final val bb_main: ModelPart = root.getChild("bb_main");
 
-	override def setupAnim(entity: FaeEntity, f: Float, g: Float, h: Float, i: Float, j: Float): Unit = {}
+  override def setupAnim(
+      entity: FaeEntity,
+      f: Float,
+      g: Float,
+      h: Float,
+      i: Float,
+      j: Float
+  ): Unit = {}
 
-	override def renderToBuffer(poseStack: PoseStack, vertexConsumer: VertexConsumer, packedLight: Int, packedOverlay: Int, red: Float, green: Float, blue: Float, alpha: Float) = {
-		bb_main.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
-	}
+  override def renderToBuffer(
+      poseStack: PoseStack,
+      vertexConsumer: VertexConsumer,
+      packedLight: Int,
+      packedOverlay: Int,
+      red: Float,
+      green: Float,
+      blue: Float,
+      alpha: Float
+  ) = {
+    bb_main.render(
+      poseStack,
+      vertexConsumer,
+      packedLight,
+      packedOverlay,
+      red,
+      green,
+      blue,
+      alpha
+    );
+  }
 }
 
 object FaeEntityModel {
-	final val LAYER_LOCATION: ModelLayerLocation = new ModelLayerLocation(new ResourceLocation(Mod.MOD_ID, "fae"), "main");
+  final val LAYER_LOCATION: ModelLayerLocation =
+    new ModelLayerLocation(new ResourceLocation(Mod.MOD_ID, "fae"), "main");
 
-	def createBodyLayer(): LayerDefinition = {
-		val meshdefinition: MeshDefinition = new MeshDefinition();
-		val partdefinition: PartDefinition = meshdefinition.getRoot();
+  def createBodyLayer(): LayerDefinition = {
+    val meshdefinition: MeshDefinition = new MeshDefinition();
+    val partdefinition: PartDefinition = meshdefinition.getRoot();
 
-		val bb_main: PartDefinition = partdefinition.addOrReplaceChild("bb_main", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F, -8.0F, 16.0F, 16.0F, 16.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 24.0F, 0.0F));
+    val bb_main: PartDefinition = partdefinition.addOrReplaceChild(
+      "bb_main",
+      CubeListBuilder
+        .create()
+        .texOffs(0, 0)
+        .addBox(
+          -8.0f,
+          -16.0f,
+          -8.0f,
+          16.0f,
+          16.0f,
+          16.0f,
+          new CubeDeformation(0.0f)
+        ),
+      PartPose.offset(0.0f, 24.0f, 0.0f)
+    );
 
-		return LayerDefinition.create(meshdefinition, 64, 64);
-	}
+    return LayerDefinition.create(meshdefinition, 64, 64);
+  }
 }
