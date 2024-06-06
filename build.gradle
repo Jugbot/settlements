@@ -95,6 +95,8 @@ subprojects {
 }
 
 spotless {
+    // Allow building with unformatted files
+    enforceCheck = false
     scala {
         target '*/src/*/scala/**/*.scala'
         // version and configFile, scalaMajorVersion are all optional
@@ -103,8 +105,8 @@ spotless {
 }
 
 task installLocalGitHook(type: Copy){
-    from new File(rootProject.rootDir, '.scripts/pre-commit')
-    into { new File(rootProject.rootDir, '.git/hooks')}
+    from(rootProject.file('.scripts/pre-commit'))
+    into(rootProject.file('.git/hooks'))
     fileMode 0775
 }
 
