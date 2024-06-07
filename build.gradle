@@ -96,7 +96,7 @@ subprojects {
 
 spotless {
     // Allow building with unformatted files
-    enforceCheck = false
+    // enforceCheck = false
     scala {
         target '*/src/*/scala/**/*.scala'
         // version and configFile, scalaMajorVersion are all optional
