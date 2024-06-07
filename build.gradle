@@ -103,11 +103,3 @@ spotless {
         scalafmt('3.7.15').configFile('.scalafmt.conf')
     }
 }
-
-task installLocalGitHook(type: Copy){
-    from(rootProject.file('.scripts/pre-commit'))
-    into(rootProject.file('.git/hooks'))
-    fileMode 0775
-}
-
-build.dependsOn installLocalGitHook
