@@ -41,14 +41,11 @@ subprojects {
                 includeGroup("org.typelevel")
             }
         }
-        // Put repositories for dependencies here
-        // ForgeGradle automatically adds the Forge maven and Maven Central for you
-
-    // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
-    // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
-    // flatDir {
-    //     dir 'libs'
-    // }
+        // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
+        // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
+        // flatDir {
+        //     dir 'libs'
+        // }
     }
 
     dependencies {
@@ -59,6 +56,11 @@ subprojects {
         compileOnly(group: 'org.scala-lang', name: 'scala3-library_3', version: rootProject.scala_version)
         // Add if you need this library. I use a modified version of Cats to avoid some module errors.
         compileOnly(group: 'org.typelevel', name: 'cats-core_3', version: rootProject.cats_version)
+        
+        testImplementation "org.scalatest:scalatest_3:3.2.18"
+        testImplementation "org.junit.platform:junit-platform-launcher:1.10.0"
+        testRuntimeOnly "org.junit.platform:junit-platform-engine:1.10.0"
+        testRuntimeOnly "org.scalatestplus:junit-5-10_3:3.2.18.0"
     }
 
     java {
@@ -90,6 +92,15 @@ subprojects {
         // Notice: This block does NOT have the same function as the block in the top level.
         // The repositories here will be used for publishing your artifact, not for
         // retrieving dependencies.
+        }
+    }
+    
+    test {
+        useJUnitPlatform {
+            includeEngines 'scalatest'
+            testLogging {
+                events("passed", "skipped", "failed", "standard_error")
+            }
         }
     }
 }
