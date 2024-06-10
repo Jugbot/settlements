@@ -27,6 +27,88 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonRawValue
 import com.fasterxml.jackson.annotation.JsonFormat.Feature
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.deser.std.CollectionDeserializer
+import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
+import scala.jdk.CollectionConverters.MapHasAsJava
+import scala.jdk.CollectionConverters.ListHasAsScala
+import com.fasterxml.jackson.core.StreamReadFeature
+import com.fasterxml.jackson.databind.deser.ContextualDeserializer
+import com.fasterxml.jackson.databind.BeanProperty
+import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.databind.KeyDeserializer
+
+type T = Any
+
+object NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
+  private def deserializeSeqPart(
+      p: JsonParser,
+      ctxt: DeserializationContext
+  ): Seq[Node[T]] = {
+    if (p.getCurrentToken() != JsonToken.START_ARRAY) {
+      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
+    }
+    p.nextToken()
+    var children = Seq[Node[Any]]()
+    while (p.currentToken() != JsonToken.END_ARRAY) {
+      children :+= deserializeObjPart(p, ctxt)
+    }
+    p.nextToken()
+    return children
+  }
+
+  private def deserializeObjPart(
+      p: JsonParser,
+      ctxt: DeserializationContext
+  ): Node[T] = {
+    if (p.getCurrentToken() != JsonToken.START_OBJECT) {
+      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
+    }
+    if (p.nextToken() != JsonToken.FIELD_NAME) {
+      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected FIELD_NAME")
+    }
+    val nodeType = p.currentName()
+    val node = nodeType match {
+      case "action" =>
+        p.nextToken()
+        // this.handledType()
+        // val action = ctxt.readValue(p, this._valueType.containedType(0))
+        val action = p.getText()
+        // val action = genericDeserializer.deserialize(p, ctxt)
+        p.nextToken()
+        ActionNode[T](action)
+      case "selector" =>
+        p.nextToken()
+        val children = deserializeSeqPart(p, ctxt)
+        SelectorNode[T](children: _*)
+      case "sequence" =>
+        p.nextToken()
+        val children = deserializeSeqPart(p, ctxt)
+        SequenceNode[T](children: _*)
+      case _ =>
+        throw ctxt.weirdKeyException(
+          classOf[Node[T]],
+          nodeType,
+          f"Unexpected key name $nodeType"
+        )
+    }
+    if (p.currentToken() != JsonToken.END_OBJECT) {
+      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected END_OBJECT")
+    }
+    p.nextToken()
+    return node
+  }
+
+  // https://github.com/ctripcorp/x-pipe/blob/6f84148106d2cb9965875e5cb69b5ce35986cd7d/core/src/main/java/com/ctrip/xpipe/tuple/PairDeserial.java#L18
+  override def deserialize(
+      p: JsonParser,
+      ctxt: DeserializationContext
+  ): Node[T] = {
+    return deserializeObjPart(p, ctxt)
+  }
+}
 
 object NodeSerializer extends StdSerializer[Node[_]](classOf[Node[_]]) {
   override def serialize(
@@ -37,25 +119,13 @@ object NodeSerializer extends StdSerializer[Node[_]](classOf[Node[_]]) {
     gen.writeStartObject()
     value match {
       case ActionNode(action) =>
-        provider.defaultSerializeField("action", (action), gen);
+        provider.defaultSerializeField("action", action, gen);
       case SelectorNode(children @ _*) =>
-        provider.defaultSerializeField("selector", (children), gen);
+        provider.defaultSerializeField("selector", children, gen);
       case SequenceNode(children @ _*) =>
-        provider.defaultSerializeField("sequence", (children), gen);
+        provider.defaultSerializeField("sequence", children, gen);
     }
     gen.writeEndObject()
-  }
-  override def serializeWithType(
-      value: Node[_],
-      gen: JsonGenerator,
-      serializers: SerializerProvider,
-      typeSer: TypeSerializer
-  ): Unit = {
-    val typeId: WritableTypeId = typeSer.typeId(value, JsonToken.START_OBJECT);
-
-    typeSer.writeTypePrefix(gen, typeId)
-    serialize(value, gen, serializers);
-    typeSer.writeTypeSuffix(gen, typeId)
   }
 }
 
@@ -63,12 +133,13 @@ object BTModule
     extends SimpleModule(
       "BTModule",
       new Version(1, 0, 0, null, "io.github.jugbot", "settlements"),
-      null,
+      Map(
+        classOf[Node[Any]] -> NodeDeserializer
+      ).asJava,
       Arrays.asList(NodeSerializer)
     )
 
 object BTMapper {
-
   val mapper = JsonMapper
     .builder()
     .addModule(DefaultScalaModule)
@@ -83,5 +154,6 @@ object BTMapper {
     .enable(JsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)
     .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS)
     .enable(JsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)
+    .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
     .build()
 }

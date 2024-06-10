@@ -32,32 +32,43 @@ import com.fasterxml.jackson.core.json.JsonReadFeature
 import io.github.jugbot.ai.BTMapper
 
 class BTSerialization extends AnyFunSuite with Matchers {
+  val jsonFixture = """{
+                    |  "sequence" : [ {
+                    |    "action" : "EAT"
+                    |  }, {
+                    |    "action" : "RE_EAT"
+                    |  }, {
+                    |    "selector" : [ {
+                    |      "action" : "SLEEP"
+                    |    } ]
+                    |  } ]
+                    |}""".stripMargin
+
+  enum ExampleBehavior {
+    case EAT, SLEEP, RAVE, RE_EAT
+  }
+
+  val treeFixture = SequenceNode(
+    ActionNode(ExampleBehavior.EAT),
+    ActionNode(ExampleBehavior.RE_EAT),
+    SelectorNode(ActionNode(ExampleBehavior.SLEEP))
+  )
+
   test("serializes to json") {
-
-    enum ExampleBehavior {
-      case EAT, SLEEP, RAVE, RE_EAT
-    }
-
-    val bt = SequenceNode(
-      ActionNode(ExampleBehavior.EAT),
-      ActionNode(ExampleBehavior.RE_EAT),
-      SelectorNode(ActionNode(ExampleBehavior.SLEEP))
-    )
-
-    val result = BTMapper.mapper.writeValueAsString(bt)
+    val result = BTMapper.mapper.writeValueAsString(treeFixture)
 
     println(result)
 
-    result shouldEqual """{
-                       |  "sequence" : [ {
-                       |    "action" : "EAT"
-                       |  }, {
-                       |    "action" : "RE_EAT"
-                       |  }, {
-                       |    "selector" : [ {
-                       |      "action" : "SLEEP"
-                       |    } ]
-                       |  } ]
-                       |}""".stripMargin
+    result shouldEqual jsonFixture
+  }
+
+  test("deserializes from json") {
+    println(jsonFixture)
+    val result =
+      BTMapper.mapper.readValue(jsonFixture, classOf[Node[ExampleBehavior]])
+
+    println(result)
+
+    result shouldEqual treeFixture
   }
 }
