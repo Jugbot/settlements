@@ -19,24 +19,22 @@ def state[A](node: Node[A], action: Function[A, Status]): Status = node match {
 
 // Method for running sequence nodes
 private def runSequence[A](
-    nodes: Seq[Node[A]],
-    cb: Function[Node[A], Status]
+  nodes: Seq[Node[A]],
+  cb: Function[Node[A], Status]
 ): Status = {
   nodes.foldLeft[Status](Success) { (acc, node) =>
-    if (acc == Success)
-      cb(node)
+    if acc == Success then cb(node)
     else Failure
   }
 }
 
 // Method for running selector nodes
 private def runSelector[A](
-    nodes: Seq[Node[A]],
-    cb: Function[Node[A], Status]
+  nodes: Seq[Node[A]],
+  cb: Function[Node[A], Status]
 ): Status = {
   nodes.foldLeft[Status](Failure) { (acc, node) =>
-    if (acc == Failure)
-      cb(node)
+    if acc == Failure then cb(node)
     else Success
   }
 }

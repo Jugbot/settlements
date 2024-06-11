@@ -14,10 +14,9 @@ import net.minecraft.world.level.Level
 
 import java.lang
 import java.util.function.Supplier
-import java.{util => ju}
+import java.util as ju
 
-class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level)
-    extends LivingEntity(entityType, world) {
+class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends LivingEntity(entityType, world) {
 
   override def getArmorSlots(): java.lang.Iterable[ItemStack] = ju.List.of()
 
@@ -25,8 +24,8 @@ class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level)
     ItemStack.EMPTY
 
   override def setItemSlot(
-      equipmentSlot: EquipmentSlot,
-      itemStack: ItemStack
+    equipmentSlot: EquipmentSlot,
+    itemStack: ItemStack
   ): Unit = {}
 
   override def getMainArm(): HumanoidArm = HumanoidArm.RIGHT

@@ -44,16 +44,16 @@ enum ExampleBehavior {
 
 class BTSerialization extends AnyFunSuite with Matchers {
   val jsonFixture = """{
-                    |  "sequence" : [ {
-                    |    "action" : "eat"
-                    |  }, {
-                    |    "action" : "re_eat"
-                    |  }, {
-                    |    "selector" : [ {
-                    |      "action" : "sleep"
-                    |    } ]
-                    |  } ]
-                    |}""".stripMargin
+                      |  "sequence" : [ {
+                      |    "action" : "eat"
+                      |  }, {
+                      |    "action" : "re_eat"
+                      |  }, {
+                      |    "selector" : [ {
+                      |      "action" : "sleep"
+                      |    } ]
+                      |  } ]
+                      |}""".stripMargin
 
   val treeFixture = SequenceNode(
     ActionNode(ExampleBehavior.eat),

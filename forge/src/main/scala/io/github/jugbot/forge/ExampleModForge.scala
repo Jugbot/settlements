@@ -2,7 +2,7 @@ package io.github.jugbot.forge;
 
 import dev.architectury.platform.forge.EventBuses
 import io.github.jugbot.Mod
-import net.minecraftforge.fml.common.{Mod => ForgeMod}
+import net.minecraftforge.fml.common.Mod as ForgeMod
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @ForgeMod(Mod.MOD_ID)

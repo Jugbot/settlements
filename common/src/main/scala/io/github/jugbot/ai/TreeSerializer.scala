@@ -28,16 +28,14 @@ import scala.jdk.CollectionConverters.MapHasAsJava
 
 type T = Any
 
-class NodeDeserializer
-    extends StdDeserializer[Node[T]](classOf[Node[T]])
-    with ContextualDeserializer {
+class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with ContextualDeserializer {
 
   private var genericType: JavaType = null;
   private var genericDeserializer: JsonDeserializer[Object] = null
 
   def this(
-      genericType: JavaType,
-      genericDeserializer: JsonDeserializer[Object]
+    genericType: JavaType,
+    genericDeserializer: JsonDeserializer[Object]
   ) = {
     this()
     this.genericType = genericType
@@ -45,15 +43,15 @@ class NodeDeserializer
   }
 
   private def deserializeSeqPart(
-      p: JsonParser,
-      ctxt: DeserializationContext
+    p: JsonParser,
+    ctxt: DeserializationContext
   ): Seq[Node[T]] = {
-    if (p.getCurrentToken() != JsonToken.START_ARRAY) {
+    if p.getCurrentToken() != JsonToken.START_ARRAY then {
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
     }
     p.nextToken()
     var children = Seq[Node[Any]]()
-    while (p.currentToken() != JsonToken.END_ARRAY) {
+    while p.currentToken() != JsonToken.END_ARRAY do {
       children :+= deserializeObjPart(p, ctxt)
     }
     p.nextToken()
@@ -61,13 +59,13 @@ class NodeDeserializer
   }
 
   private def deserializeObjPart(
-      p: JsonParser,
-      ctxt: DeserializationContext
+    p: JsonParser,
+    ctxt: DeserializationContext
   ): Node[T] = {
-    if (p.getCurrentToken() != JsonToken.START_OBJECT) {
+    if p.getCurrentToken() != JsonToken.START_OBJECT then {
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
     }
-    if (p.nextToken() != JsonToken.FIELD_NAME) {
+    if p.nextToken() != JsonToken.FIELD_NAME then {
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected FIELD_NAME")
     }
     val nodeType = p.currentName()
@@ -92,7 +90,7 @@ class NodeDeserializer
           f"Unexpected key name $nodeType"
         )
     }
-    if (p.currentToken() != JsonToken.END_OBJECT) {
+    if p.currentToken() != JsonToken.END_OBJECT then {
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected END_OBJECT")
     }
     p.nextToken()
@@ -100,21 +98,21 @@ class NodeDeserializer
   }
 
   override def deserialize(
-      p: JsonParser,
-      ctxt: DeserializationContext
+    p: JsonParser,
+    ctxt: DeserializationContext
   ): Node[T] = {
     return deserializeObjPart(p, ctxt)
   }
 
   override def createContextual(
-      ctxt: DeserializationContext,
-      property: BeanProperty
+    ctxt: DeserializationContext,
+    property: BeanProperty
   ): JsonDeserializer[Node[T]] = {
     val contextualType: JavaType = ctxt.getContextualType()
 
     val typeParameters: List[JavaType] =
       List.from(contextualType.getBindings.getTypeParameters.asScala)
-    if (typeParameters.size != 1) {
+    if typeParameters.size != 1 then {
       throw new IllegalStateException("size should be 1")
     }
 
@@ -128,17 +126,17 @@ class NodeDeserializer
 
 object NodeSerializer extends StdSerializer[Node[?]](classOf[Node[?]]) {
   override def serialize(
-      value: Node[?],
-      gen: JsonGenerator,
-      provider: SerializerProvider
+    value: Node[?],
+    gen: JsonGenerator,
+    provider: SerializerProvider
   ): Unit = {
     gen.writeStartObject()
     value match {
       case ActionNode(action) =>
         provider.defaultSerializeField("action", action, gen);
-      case SelectorNode(children @ _*) =>
+      case SelectorNode(children*) =>
         provider.defaultSerializeField("selector", children, gen);
-      case SequenceNode(children @ _*) =>
+      case SequenceNode(children*) =>
         provider.defaultSerializeField("sequence", children, gen);
     }
     gen.writeEndObject()

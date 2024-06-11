@@ -19,23 +19,23 @@ class FaeEntityModel(root: ModelPart) extends EntityModel[FaeEntity] {
   final val bb_main: ModelPart = root.getChild("bb_main");
 
   override def setupAnim(
-      entity: FaeEntity,
-      f: Float,
-      g: Float,
-      h: Float,
-      i: Float,
-      j: Float
+    entity: FaeEntity,
+    f: Float,
+    g: Float,
+    h: Float,
+    i: Float,
+    j: Float
   ): Unit = {}
 
   override def renderToBuffer(
-      poseStack: PoseStack,
-      vertexConsumer: VertexConsumer,
-      packedLight: Int,
-      packedOverlay: Int,
-      red: Float,
-      green: Float,
-      blue: Float,
-      alpha: Float
+    poseStack: PoseStack,
+    vertexConsumer: VertexConsumer,
+    packedLight: Int,
+    packedOverlay: Int,
+    red: Float,
+    green: Float,
+    blue: Float,
+    alpha: Float
   ) = {
     bb_main.render(
       poseStack,
