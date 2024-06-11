@@ -4,8 +4,9 @@
 		{
 			"type": "gradle",
 			"id": "c:\\Users\\lucas\\Documents\\GitHub\\architecturybuildsettlements",
-			"script": "spotlessApply",
+			"script": "scalaFix",
 			"description": "Assembles and tests this project.",
+			"group": "build",
 			"project": "settlements",
 			"buildFile": "C:\\Users\\lucas\\Documents\\GitHub\\architectury\\build.gradle",
 			"rootProject": "settlements",
@@ -16,7 +17,26 @@
 			"problemMatcher": [
 				"$gradle"
 			],
-			"label": "gradle: spotlessApply"
+			"label": "gradle: scalaFix"
+		},
+		{
+			"type": "gradle",
+			"id": "c:\\Users\\lucas\\Documents\\GitHub\\architecturybuildsettlements",
+			"script": "spotlessApply",
+			"description": "Assembles and tests this project.",
+			"group": "build",
+			"project": "settlements",
+			"buildFile": "C:\\Users\\lucas\\Documents\\GitHub\\architectury\\build.gradle",
+			"rootProject": "settlements",
+			"projectFolder": "c:\\Users\\lucas\\Documents\\GitHub\\architectury",
+			"workspaceFolder": "c:\\Users\\lucas\\Documents\\GitHub\\architectury",
+			"args": "",
+			"javaDebug": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"label": "gradle: spotlessApply",
+			"dependsOn": ["gradle: scalaFix"]
 		},
 		{
 			"type": "gradle",

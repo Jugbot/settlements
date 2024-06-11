@@ -4,6 +4,7 @@ plugins {
     id 'architectury-plugin' version '3.4-SNAPSHOT'
     id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
     id "com.diffplug.spotless" version "6.25.0"
+    id 'io.github.cosmicsilence.scalafix' version "0.2.2" apply false
 }
 
 architectury {
@@ -20,6 +21,7 @@ subprojects {
     apply plugin: 'dev.architectury.loom'
     apply plugin: 'architectury-plugin'
     apply plugin: 'maven-publish'
+    apply plugin: 'io.github.cosmicsilence.scalafix'
 
     base {
         // Set up a suffixed format for the mod jar names, e.g. `example-fabric`.
@@ -102,6 +104,14 @@ subprojects {
                 events("passed", "skipped", "failed", "standard_error")
             }
         }
+    }
+    scalafix {
+        configFile = file("../.scalafix.conf")
+    }
+
+    
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.additionalParameters = []
     }
 }
 

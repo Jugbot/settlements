@@ -1,44 +1,30 @@
 package io.github.jugbot.ai
 
-import java.util.Arrays
-import java.util.ArrayList
-import com.google.common.collect.Lists
-import com.fasterxml.jackson.module.scala.EnumModule
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.databind.jsontype.TypeSerializer
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.json.JsonMapper
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.core.Version
-import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.json.JsonReadFeature
-import com.fasterxml.jackson.core.`type`.WritableTypeId
-import com.fasterxml.jackson.annotation.JsonValue
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonRawValue
-import com.fasterxml.jackson.annotation.JsonFormat.Feature
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.deser.std.CollectionDeserializer
-import scala.jdk.CollectionConverters.MapHasAsJava
-import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
-import scala.jdk.CollectionConverters.ListHasAsScala
+import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.core.StreamReadFeature
-import com.fasterxml.jackson.databind.deser.ContextualDeserializer
+import com.fasterxml.jackson.core.Version
+import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.databind.BeanProperty
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JavaType
-import com.fasterxml.jackson.databind.KeyDeserializer
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.deser.ContextualDeserializer
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.EnumModule
+
+import java.util.Arrays
+import scala.jdk.CollectionConverters.ListHasAsScala
+import scala.jdk.CollectionConverters.MapHasAsJava
 
 type T = Any
 
@@ -94,11 +80,11 @@ class NodeDeserializer
       case "selector" =>
         p.nextToken()
         val children = deserializeSeqPart(p, ctxt)
-        SelectorNode[T](children: _*)
+        SelectorNode[T](children*)
       case "sequence" =>
         p.nextToken()
         val children = deserializeSeqPart(p, ctxt)
-        SequenceNode[T](children: _*)
+        SequenceNode[T](children*)
       case _ =>
         throw ctxt.weirdKeyException(
           classOf[Node[T]],
@@ -140,9 +126,9 @@ class NodeDeserializer
   }
 }
 
-object NodeSerializer extends StdSerializer[Node[_]](classOf[Node[_]]) {
+object NodeSerializer extends StdSerializer[Node[?]](classOf[Node[?]]) {
   override def serialize(
-      value: Node[_],
+      value: Node[?],
       gen: JsonGenerator,
       provider: SerializerProvider
   ): Unit = {

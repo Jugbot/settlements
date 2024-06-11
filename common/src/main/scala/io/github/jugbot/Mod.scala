@@ -7,7 +7,6 @@ import io.github.jugbot.registry.Registries
 import io.github.jugbot.render.FaeRenderer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
-import net.minecraft.client.renderer.entity.CowRenderer
 import org.apache.logging.log4j.LogManager
 
 object Mod {
@@ -26,7 +25,7 @@ object Mod {
     def initializeClient(): Unit = {
       EntityModelLayerRegistry.register(
         FaeEntityModel.LAYER_LOCATION,
-        FaeEntityModel.createBodyLayer _
+        () => FaeEntityModel.createBodyLayer()
       )
       EntityRendererRegistry.register(
         Registries.FAE_ENTITY,

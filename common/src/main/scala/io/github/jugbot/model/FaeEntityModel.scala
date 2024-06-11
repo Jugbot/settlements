@@ -1,20 +1,19 @@
 package io.github.jugbot.model
 
+import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.blaze3d.vertex.VertexConsumer
+import io.github.jugbot.Mod
 import io.github.jugbot.entity.FaeEntity
 import net.minecraft.client.model.EntityModel
-import net.minecraft.client.model.geom.ModelPart
-import net.minecraft.client.model.geom.builders.MeshDefinition
 import net.minecraft.client.model.geom.ModelLayerLocation
-import net.minecraft.resources.ResourceLocation
-import net.minecraft.client.model.geom.builders.LayerDefinition
-import net.minecraft.client.model.geom.builders.PartDefinition
-import net.minecraft.client.model.geom.builders.CubeListBuilder
+import net.minecraft.client.model.geom.ModelPart
 import net.minecraft.client.model.geom.PartPose
 import net.minecraft.client.model.geom.builders.CubeDeformation
-import net.minecraft.world.entity.Entity
-import com.mojang.blaze3d.vertex.VertexConsumer
-import com.mojang.blaze3d.vertex.PoseStack
-import io.github.jugbot.Mod
+import net.minecraft.client.model.geom.builders.CubeListBuilder
+import net.minecraft.client.model.geom.builders.LayerDefinition
+import net.minecraft.client.model.geom.builders.MeshDefinition
+import net.minecraft.client.model.geom.builders.PartDefinition
+import net.minecraft.resources.ResourceLocation
 
 class FaeEntityModel(root: ModelPart) extends EntityModel[FaeEntity] {
   final val bb_main: ModelPart = root.getChild("bb_main");

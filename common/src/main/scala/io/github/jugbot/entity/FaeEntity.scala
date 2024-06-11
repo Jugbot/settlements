@@ -1,23 +1,20 @@
 package io.github.jugbot.entity
 
-import java.util.function.Supplier
 import com.google.common.base.Suppliers
-import net.minecraft.world.entity.LivingEntity
-import net.minecraft.world.level.Level
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
-import net.minecraft.world.entity.MobCategory
-import net.minecraft.world.entity.NeutralMob
-import net.minecraft.world.entity.Mob
-import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.entity.EquipmentSlot
-import net.minecraft.world.item.ItemStack
-import java.lang
+import net.minecraft.world.entity.HumanoidArm
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.MobCategory
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.Level
+
+import java.lang
+import java.util.function.Supplier
 import java.{util => ju}
-import net.minecraft.world.entity.Entity
-import net.minecraft.world.entity.LightningBolt
-import net.minecraft.server.level.ServerLevel
 
 class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level)
     extends LivingEntity(entityType, world) {

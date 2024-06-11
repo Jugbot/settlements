@@ -1,11 +1,5 @@
 package io.github.jugbot.ai
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As
-import com.fasterxml.jackson.annotation.JsonUnwrapped
-
 sealed trait Node[A]
 case class ActionNode[A](action: A) extends Node[A]
 case class SequenceNode[A](children: Node[A]*) extends Node[A]

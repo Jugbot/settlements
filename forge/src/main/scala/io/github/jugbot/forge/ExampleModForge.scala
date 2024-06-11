@@ -1,10 +1,9 @@
 package io.github.jugbot.forge;
 
-import dev.architectury.platform.forge.EventBuses;
-import net.minecraftforge.fml.common.Mod as ForgeMod;
+import dev.architectury.platform.forge.EventBuses
+import io.github.jugbot.Mod
+import net.minecraftforge.fml.common.{Mod => ForgeMod}
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-
-import io.github.jugbot.Mod;
 
 @ForgeMod(Mod.MOD_ID)
 object ExampleModForge {
