@@ -31,8 +31,8 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.deser.std.CollectionDeserializer
-import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
 import scala.jdk.CollectionConverters.MapHasAsJava
+import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
 import scala.jdk.CollectionConverters.ListHasAsScala
 import com.fasterxml.jackson.core.StreamReadFeature
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer
@@ -42,7 +42,22 @@ import com.fasterxml.jackson.databind.KeyDeserializer
 
 type T = Any
 
-object NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
+class NodeDeserializer
+    extends StdDeserializer[Node[T]](classOf[Node[T]])
+    with ContextualDeserializer {
+
+  private var genericType: JavaType = null;
+  private var genericDeserializer: JsonDeserializer[Object] = null
+
+  def this(
+      genericType: JavaType,
+      genericDeserializer: JsonDeserializer[Object]
+  ) = {
+    this()
+    this.genericType = genericType
+    this.genericDeserializer = genericDeserializer
+  }
+
   private def deserializeSeqPart(
       p: JsonParser,
       ctxt: DeserializationContext
@@ -73,10 +88,7 @@ object NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
     val node = nodeType match {
       case "action" =>
         p.nextToken()
-        // this.handledType()
-        // val action = ctxt.readValue(p, this._valueType.containedType(0))
-        val action = p.getText()
-        // val action = genericDeserializer.deserialize(p, ctxt)
+        val action = genericDeserializer.deserialize(p, ctxt)
         p.nextToken()
         ActionNode[T](action)
       case "selector" =>
@@ -101,12 +113,30 @@ object NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
     return node
   }
 
-  // https://github.com/ctripcorp/x-pipe/blob/6f84148106d2cb9965875e5cb69b5ce35986cd7d/core/src/main/java/com/ctrip/xpipe/tuple/PairDeserial.java#L18
   override def deserialize(
       p: JsonParser,
       ctxt: DeserializationContext
   ): Node[T] = {
     return deserializeObjPart(p, ctxt)
+  }
+
+  override def createContextual(
+      ctxt: DeserializationContext,
+      property: BeanProperty
+  ): JsonDeserializer[Node[T]] = {
+    val contextualType: JavaType = ctxt.getContextualType()
+
+    val typeParameters: List[JavaType] =
+      List.from(contextualType.getBindings.getTypeParameters.asScala)
+    if (typeParameters.size != 1) {
+      throw new IllegalStateException("size should be 1")
+    }
+
+    val genericType: JavaType = typeParameters(0)
+
+    val genericDeserializer: JsonDeserializer[Object] =
+      ctxt.findContextualValueDeserializer(genericType, property)
+    return NodeDeserializer(genericType, genericDeserializer)
   }
 }
 
@@ -134,7 +164,7 @@ object BTModule
       "BTModule",
       new Version(1, 0, 0, null, "io.github.jugbot", "settlements"),
       Map(
-        classOf[Node[Any]] -> NodeDeserializer
+        classOf[Node[Any]] -> new NodeDeserializer()
       ).asJava,
       Arrays.asList(NodeSerializer)
     )

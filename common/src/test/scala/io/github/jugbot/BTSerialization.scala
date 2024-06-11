@@ -30,28 +30,37 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.annotation.JsonFormat.Feature
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import io.github.jugbot.ai.BTMapper
+import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.core.`type`.TypeReference
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.JsonCreator
+import scala.annotation.targetName
+
+
+enum ExampleBehavior {
+  case eat extends ExampleBehavior
+  case sleep extends ExampleBehavior
+  case rave extends ExampleBehavior
+  case re_eat extends ExampleBehavior
+}
 
 class BTSerialization extends AnyFunSuite with Matchers {
   val jsonFixture = """{
                     |  "sequence" : [ {
-                    |    "action" : "EAT"
+                    |    "action" : "eat"
                     |  }, {
-                    |    "action" : "RE_EAT"
+                    |    "action" : "re_eat"
                     |  }, {
                     |    "selector" : [ {
-                    |      "action" : "SLEEP"
+                    |      "action" : "sleep"
                     |    } ]
                     |  } ]
                     |}""".stripMargin
 
-  enum ExampleBehavior {
-    case EAT, SLEEP, RAVE, RE_EAT
-  }
-
   val treeFixture = SequenceNode(
-    ActionNode(ExampleBehavior.EAT),
-    ActionNode(ExampleBehavior.RE_EAT),
-    SelectorNode(ActionNode(ExampleBehavior.SLEEP))
+    ActionNode(ExampleBehavior.eat),
+    ActionNode(ExampleBehavior.re_eat),
+    SelectorNode(ActionNode(ExampleBehavior.sleep))
   )
 
   test("serializes to json") {
@@ -63,9 +72,15 @@ class BTSerialization extends AnyFunSuite with Matchers {
   }
 
   test("deserializes from json") {
-    println(jsonFixture)
-    val result =
-      BTMapper.mapper.readValue(jsonFixture, classOf[Node[ExampleBehavior]])
+    val javaType: JavaType =
+      BTMapper.mapper.getTypeFactory.constructType(classOf[ExampleBehavior])
+
+    val typeRef = BTMapper.mapper
+      .getTypeFactory()
+      .constructSimpleType(classOf[Node[?]], Array(javaType))
+    println(typeRef.toString())
+    val result: Node[ExampleBehavior] =
+      BTMapper.mapper.readValue(jsonFixture, typeRef)
 
     println(result)
 

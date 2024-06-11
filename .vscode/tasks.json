@@ -1,0 +1,44 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "gradle",
+			"id": "c:\\Users\\lucas\\Documents\\GitHub\\architecturybuildsettlements",
+			"script": "spotlessApply",
+			"description": "Assembles and tests this project.",
+			"project": "settlements",
+			"buildFile": "C:\\Users\\lucas\\Documents\\GitHub\\architectury\\build.gradle",
+			"rootProject": "settlements",
+			"projectFolder": "c:\\Users\\lucas\\Documents\\GitHub\\architectury",
+			"workspaceFolder": "c:\\Users\\lucas\\Documents\\GitHub\\architectury",
+			"args": "",
+			"javaDebug": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"label": "gradle: spotlessApply"
+		},
+		{
+			"type": "gradle",
+			"id": "c:\\Users\\lucas\\Documents\\GitHub\\architecturybuildsettlements",
+			"script": "build",
+			"description": "Assembles and tests this project.",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"project": "settlements",
+			"buildFile": "C:\\Users\\lucas\\Documents\\GitHub\\architectury\\build.gradle",
+			"rootProject": "settlements",
+			"projectFolder": "c:\\Users\\lucas\\Documents\\GitHub\\architectury",
+			"workspaceFolder": "c:\\Users\\lucas\\Documents\\GitHub\\architectury",
+			"args": "",
+			"javaDebug": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"label": "gradle: build",
+			"dependsOn": ["gradle: spotlessApply"]
+		}
+	]
+}
