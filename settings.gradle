@@ -11,4 +11,5 @@ rootProject.name = 'settlements'
 
 include 'common'
 include 'fabric'
-include 'forge'
+// Currently broken, removed temporarily for faster compile times
+// include 'forge'
