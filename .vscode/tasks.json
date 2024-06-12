@@ -36,7 +36,9 @@
 				"$gradle"
 			],
 			"label": "gradle: spotlessApply",
-			"dependsOn": ["gradle: scalaFix"]
+			"dependsOn": [
+				"gradle: scalaFix"
+			]
 		},
 		{
 			"type": "gradle",
@@ -58,7 +60,33 @@
 				"$gradle"
 			],
 			"label": "gradle: build",
-			"dependsOn": ["gradle: spotlessApply"]
+			"dependsOn": [
+				"gradle: spotlessApply"
+			]
+		},
+		{
+			"type": "gradle",
+			"id": "c:\\Users\\lucas\\Documents\\GitHub\\architecturyfabric:runClientfabric",
+			"script": "fabric:runClient",
+			"description": "Starts the 'null' run configuration",
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
+			"project": "fabric",
+			"buildFile": "C:\\Users\\lucas\\Documents\\GitHub\\architectury\\fabric\\build.gradle",
+			"rootProject": "settlements",
+			"projectFolder": "c:\\Users\\lucas\\Documents\\GitHub\\architectury",
+			"workspaceFolder": "c:\\Users\\lucas\\Documents\\GitHub\\architectury",
+			"args": "",
+			"javaDebug": false,
+			"problemMatcher": [
+				"$gradle"
+			],
+			"label": "gradle: fabric:runClient",
+			"dependsOn": [
+				"gradle: spotlessApply"
+			]
 		}
 	]
 }

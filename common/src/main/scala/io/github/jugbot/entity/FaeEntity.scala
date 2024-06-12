@@ -32,6 +32,9 @@ import net.minecraft.world.entity.ai.village.poi.PoiManager
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.tags.BlockTags
 import net.minecraft.world.level.block.BedBlock
+import net.minecraft.world.damagesource.DamageSource
+import java.util.Optional
+import net.minecraft.network.protocol.game.DebugPackets
 
 class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends LivingEntity(entityType, world) {
 
@@ -57,55 +60,81 @@ class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends
 
   override def baseTick(): Unit = {
     super.baseTick()
+    if this.level().isClientSide then {
+      return;
+    }
     state(
       FaeEntity.behaviorTree,
-      (behavior: FaeBehavior) =>
-        behavior match {
-          case FaeBehavior.unknown => {
-            println("Encountered a behavior without an implementation!")
-            Failure
-          }
-          case FaeBehavior.unimplemented => {
-            println("Encountered unimplemented behavior, skipping.")
-            Success
-          }
-          case FaeBehavior.is_tired => {
-            if this.level().isNight() then Success else Failure
-          }
-          case FaeBehavior.has_valid_bed => {
-            bedPosition match {
-              case None => Failure
-              case Some(blockPos) => {
-                val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(blockPos);
-                if blockPos.closerToCenterThan(this.position(), 2.0) && blockState.is(BlockTags.BEDS) && blockState
-                    .getValue(BedBlock.OCCUPIED) == false
-                then Success
-                else Failure
-              }
-            }
-          }
-          case FaeBehavior.sleep => {
-            if this.bedPosition.isDefined then Success else Failure
-          }
-          case FaeBehavior.claim_bed => {
-            val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager()
-            // TODO: instead of finding beds within a distance we should keep record of all beds within the kingdom
-            val maybeHome = poiManager.findClosest(holder => holder.is(PoiTypes.HOME),
-                                                   this.blockPosition(),
-                                                   48,
-                                                   PoiManager.Occupancy.HAS_SPACE
-            )
-            if maybeHome.isPresent() then {
-              val takenPOI = poiManager.take(holder => holder.is(PoiTypes.HOME), (_, _) => true, maybeHome.get, 32)
-              bedPosition = if takenPOI.isPresent() then Some(takenPOI.get) else None
-              bedPosition match {
-                case Some(value) => Success
-                case None        => Failure
-              }
-            } else Failure
+      this.performBehavior
+    )
+  }
+
+  private def performBehavior(behavior: FaeBehavior): Status = {
+    behavior match {
+      case FaeBehavior.unknown => {
+        println("Encountered a behavior without an implementation!")
+        Failure
+      }
+      case FaeBehavior.unimplemented => {
+        println("Encountered unimplemented behavior, skipping.")
+        Success
+      }
+      case FaeBehavior.is_tired => {
+        if this.level().isNight() then Success else Failure
+      }
+      case FaeBehavior.has_valid_bed => {
+        bedPosition match {
+          case None => Failure
+          case Some(blockPos) => {
+            val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(blockPos);
+            if blockPos.closerToCenterThan(this.position(), 2.0) && blockState.is(BlockTags.BEDS) && blockState
+                .getValue(BedBlock.OCCUPIED) == false
+            then Success
+            else Failure
           }
         }
-    )
+      }
+      case FaeBehavior.sleep => {
+        if this.bedPosition.isDefined then Success else Failure
+      }
+      case FaeBehavior.claim_bed => {
+        val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager()
+        // TODO: instead of finding beds within a distance we should keep record of all beds within the kingdom
+        val maybeHome = poiManager.findClosest(holder => holder.is(PoiTypes.HOME),
+                                               this.blockPosition(),
+                                               48,
+                                               PoiManager.Occupancy.HAS_SPACE
+        )
+        if maybeHome.isPresent() then {
+          val takenPOI = poiManager.take(holder => holder.is(PoiTypes.HOME), (_, _) => true, maybeHome.get, 32)
+          bedPosition = if takenPOI.isPresent() then Some(takenPOI.get) else None
+          bedPosition match {
+            case Some(value) => Success
+            case None        => Failure
+          }
+        } else Failure
+      }
+    }
+  }
+
+  override def die(damageSource: DamageSource): Unit = {
+    println("*dies*")
+    super.die(damageSource)
+    if this.level().isClientSide then {
+      return;
+    }
+    val serverLevel = this.level().asInstanceOf[ServerLevel]
+
+    val poiManager: PoiManager = serverLevel.getPoiManager();
+    val optional = bedPosition match {
+      case Some(blockPos) => poiManager.getType(blockPos)
+      case None           => Optional.empty()
+    }
+    if optional.isPresent() then {
+      poiManager.release(bedPosition.get);
+      // TODO: Copypasta, what is this?
+      DebugPackets.sendPoiTicketCountPacket(serverLevel, bedPosition.get);
+    }
   }
 
   var bedPosition: Option[BlockPos] = Option.empty
