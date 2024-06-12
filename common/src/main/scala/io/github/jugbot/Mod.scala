@@ -18,19 +18,20 @@ object Mod {
     LOGGER.info("Hello World!")
     Registries.initialize()
   }
+}
 
+@Environment(EnvType.CLIENT)
+object Client {
   @Environment(EnvType.CLIENT)
-  object Client {
-    @Environment(EnvType.CLIENT)
-    def initializeClient(): Unit = {
-      EntityModelLayerRegistry.register(
-        FaeEntityModel.LAYER_LOCATION,
-        () => FaeEntityModel.createBodyLayer()
-      )
-      EntityRendererRegistry.register(
-        Registries.FAE_ENTITY,
-        new FaeRenderer(_)
-      );
-    }
+  def initializeClient(): Unit = {
+    EntityModelLayerRegistry.register(
+      FaeEntityModel.LAYER_LOCATION,
+      () => FaeEntityModel.createBodyLayer()
+    )
+    EntityRendererRegistry.register(
+      Registries.FAE_ENTITY,
+      new FaeRenderer(_)
+    );
   }
 }
+
