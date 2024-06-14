@@ -120,10 +120,20 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
             else Failure
           case None => Failure
         }
-      case FaeBehavior.has_nav_path      => Failure
-      case FaeBehavior.get_nav_path      => Failure
-      case FaeBehavior.path_unobstructed => Failure
-      case FaeBehavior.move_along_path   => Failure
+      case FaeBehavior.has_nav_path =>
+        if this.getNavigation.isInProgress then Success else Failure
+      case FaeBehavior.get_nav_path =>
+        bedPosition match {
+          case Some(blockPos) =>
+            this.getNavigation.createPath(blockPos, 42)
+            Success
+          case None => Failure
+        }
+      case FaeBehavior.path_unobstructed =>
+        if this.getNavigation.isStuck then Failure else Success
+      case FaeBehavior.move_along_path   =>
+        this.getNavigation.tick()
+        Success
     }
 
   override def die(damageSource: DamageSource): Unit = {
