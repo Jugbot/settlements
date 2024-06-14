@@ -108,6 +108,10 @@ subprojects {
     scalafix {
         configFile = file("../.scalafix.conf")
     }
+
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.additionalParameters = ["-Werror"]
+    }
 }
 
 spotless {
