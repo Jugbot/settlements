@@ -6,11 +6,13 @@ import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.MobCategory
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
+import net.minecraft.world.entity.ai.navigation.PathNavigation
 
 import java.lang
 import java.util.function.Supplier
@@ -36,8 +38,9 @@ import net.minecraft.world.damagesource.DamageSource
 
 import java.util.Optional
 import net.minecraft.network.protocol.game.DebugPackets
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation
 
-class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends LivingEntity(entityType, world) {
+class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(entityType, world) {
 
   override def getArmorSlots: java.lang.Iterable[ItemStack] = ju.List.of()
 
@@ -108,10 +111,22 @@ class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends
             case None        => Failure
           }
         } else Failure
+      case FaeBehavior.is_at_location =>
+        bedPosition match {
+          // Copied from SleepInBed Goal
+          // TODO: do not hardcode bedPosition
+          case Some(blockPos) =>
+            if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.14) then Success
+            else Failure
+          case None => Failure
+        }
+      case FaeBehavior.has_nav_path      => Failure
+      case FaeBehavior.get_nav_path      => Failure
+      case FaeBehavior.path_unobstructed => Failure
+      case FaeBehavior.move_along_path   => Failure
     }
 
   override def die(damageSource: DamageSource): Unit = {
-    println("*dies*")
     super.die(damageSource)
     if this.level().isClientSide then {
       return
