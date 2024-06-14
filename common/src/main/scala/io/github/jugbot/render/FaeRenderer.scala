@@ -14,12 +14,11 @@ class FaeRenderer(context: EntityRendererProvider.Context)
       0.5f
     ) {
 
-  override def getTextureLocation(fae: FaeEntity): ResourceLocation = {
-    return FaeRenderer.FAE_LOCATION;
-  }
+  override def getTextureLocation(fae: FaeEntity): ResourceLocation =
+    FaeRenderer.FAE_LOCATION
 }
 
 object FaeRenderer {
-  val FAE_LOCATION: ResourceLocation =
+  private val FAE_LOCATION: ResourceLocation =
     new ResourceLocation(Mod.MOD_ID, "textures/entity/fae/fae.png");
 }

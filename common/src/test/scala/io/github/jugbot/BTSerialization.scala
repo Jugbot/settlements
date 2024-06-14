@@ -43,19 +43,19 @@ enum ExampleBehavior {
 }
 
 class BTSerialization extends AnyFunSuite with Matchers {
-  val jsonFixture = """{
-                      |  "sequence" : [ {
-                      |    "action" : "eat"
-                      |  }, {
-                      |    "action" : "re_eat"
-                      |  }, {
-                      |    "selector" : [ {
-                      |      "action" : "sleep"
-                      |    } ]
-                      |  } ]
-                      |}""".stripMargin
+  val jsonFixture: String = """{
+                              |  "sequence" : [ {
+                              |    "action" : "eat"
+                              |  }, {
+                              |    "action" : "re_eat"
+                              |  }, {
+                              |    "selector" : [ {
+                              |      "action" : "sleep"
+                              |    } ]
+                              |  } ]
+                              |}""".stripMargin
 
-  val treeFixture = SequenceNode(
+  val treeFixture: SequenceNode[ExampleBehavior] = SequenceNode(
     ActionNode(ExampleBehavior.eat),
     ActionNode(ExampleBehavior.re_eat),
     SelectorNode(ActionNode(ExampleBehavior.sleep))
@@ -73,10 +73,9 @@ class BTSerialization extends AnyFunSuite with Matchers {
     val javaType: JavaType =
       BTMapper.mapper.getTypeFactory.constructType(classOf[ExampleBehavior])
 
-    val typeRef = BTMapper.mapper
-      .getTypeFactory()
+    val typeRef = BTMapper.mapper.getTypeFactory
       .constructSimpleType(classOf[Node[?]], Array(javaType))
-    println(typeRef.toString())
+    println(typeRef.toString)
     val result: Node[ExampleBehavior] =
       BTMapper.mapper.readValue(jsonFixture, typeRef)
 

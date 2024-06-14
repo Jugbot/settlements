@@ -34,7 +34,7 @@ subprojects {
         // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
         // See https://docs.gradle.org/current/userguide/declaring_repositories.html
         // for more information about repositories.
-        
+
         maven {
             name = "Azure-SLP"
             url = uri("https://pkgs.dev.azure.com/Kotori316/minecraft/_packaging/mods/maven/v1")
@@ -54,11 +54,11 @@ subprojects {
         minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
         mappings loom.officialMojangMappings()
 
-        
+
         compileOnly(group: 'org.scala-lang', name: 'scala3-library_3', version: rootProject.scala_version)
         // Add if you need this library. I use a modified version of Cats to avoid some module errors.
         compileOnly(group: 'org.typelevel', name: 'cats-core_3', version: rootProject.cats_version)
-        
+
         testImplementation "org.scalatest:scalatest_3:3.2.18"
         testImplementation "org.junit.platform:junit-platform-launcher:1.10.0"
         testRuntimeOnly "org.junit.platform:junit-platform-engine:1.10.0"
@@ -90,13 +90,13 @@ subprojects {
 
         // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
         repositories {
-        // Add repositories to publish to here.
-        // Notice: This block does NOT have the same function as the block in the top level.
-        // The repositories here will be used for publishing your artifact, not for
-        // retrieving dependencies.
+            // Add repositories to publish to here.
+            // Notice: This block does NOT have the same function as the block in the top level.
+            // The repositories here will be used for publishing your artifact, not for
+            // retrieving dependencies.
         }
     }
-    
+
     test {
         useJUnitPlatform {
             includeEngines 'scalatest'
@@ -107,11 +107,6 @@ subprojects {
     }
     scalafix {
         configFile = file("../.scalafix.conf")
-    }
-
-    
-    tasks.withType(ScalaCompile) {
-        scalaCompileOptions.additionalParameters = []
     }
 }
 

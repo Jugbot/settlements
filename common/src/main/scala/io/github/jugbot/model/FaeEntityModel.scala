@@ -16,7 +16,7 @@ import net.minecraft.client.model.geom.builders.PartDefinition
 import net.minecraft.resources.ResourceLocation
 
 class FaeEntityModel(root: ModelPart) extends EntityModel[FaeEntity] {
-  final val bb_main: ModelPart = root.getChild("bb_main");
+  final private val bb_main: ModelPart = root.getChild("bb_main")
 
   override def setupAnim(
     entity: FaeEntity,
@@ -36,7 +36,7 @@ class FaeEntityModel(root: ModelPart) extends EntityModel[FaeEntity] {
     green: Float,
     blue: Float,
     alpha: Float
-  ) = {
+  ): Unit =
     bb_main.render(
       poseStack,
       vertexConsumer,
@@ -46,8 +46,7 @@ class FaeEntityModel(root: ModelPart) extends EntityModel[FaeEntity] {
       green,
       blue,
       alpha
-    );
-  }
+    )
 }
 
 object FaeEntityModel {
@@ -55,8 +54,8 @@ object FaeEntityModel {
     new ModelLayerLocation(new ResourceLocation(Mod.MOD_ID, "fae"), "main");
 
   def createBodyLayer(): LayerDefinition = {
-    val meshdefinition: MeshDefinition = new MeshDefinition();
-    val partdefinition: PartDefinition = meshdefinition.getRoot();
+    val meshdefinition: MeshDefinition = new MeshDefinition()
+    val partdefinition: PartDefinition = meshdefinition.getRoot
 
     val bb_main: PartDefinition = partdefinition.addOrReplaceChild(
       "bb_main",
@@ -73,8 +72,8 @@ object FaeEntityModel {
           new CubeDeformation(0.0f)
         ),
       PartPose.offset(0.0f, 24.0f, 0.0f)
-    );
+    )
 
-    return LayerDefinition.create(meshdefinition, 64, 64);
+    LayerDefinition.create(meshdefinition, 64, 64)
   }
 }

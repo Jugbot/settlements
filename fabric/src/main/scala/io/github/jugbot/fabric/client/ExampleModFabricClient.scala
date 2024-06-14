@@ -1,4 +1,4 @@
-package io.github.jugbot.fabric.client;
+package io.github.jugbot.fabric.client
 
 import dev.architectury.registry.client.level.entity.EntityModelLayerRegistry
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry
@@ -9,7 +9,6 @@ import io.github.jugbot.render.FaeRenderer
 import net.fabricmc.api.ClientModInitializer
 
 final class ExampleModFabricClient extends ClientModInitializer {
-  override def onInitializeClient(): Unit = {
+  override def onInitializeClient(): Unit =
     Mod.Client.initializeClient()
-  }
 }

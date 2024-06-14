@@ -33,12 +33,13 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.tags.BlockTags
 import net.minecraft.world.level.block.BedBlock
 import net.minecraft.world.damagesource.DamageSource
+
 import java.util.Optional
 import net.minecraft.network.protocol.game.DebugPackets
 
 class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends LivingEntity(entityType, world) {
 
-  override def getArmorSlots(): java.lang.Iterable[ItemStack] = ju.List.of()
+  override def getArmorSlots: java.lang.Iterable[ItemStack] = ju.List.of()
 
   override def getItemBySlot(equipmentSlot: EquipmentSlot): ItemStack =
     ItemStack.EMPTY
@@ -48,20 +49,20 @@ class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends
     itemStack: ItemStack
   ): Unit = {}
 
-  override def getMainArm(): HumanoidArm = HumanoidArm.RIGHT
+  override def getMainArm: HumanoidArm = HumanoidArm.RIGHT
 
-  override def isPushable(): Boolean = false
+  override def isPushable: Boolean = false
 
-  override def doPush(entity: Entity) = {}
+  override def doPush(entity: Entity): Unit = {}
 
   override def attackable(): Boolean = false
 
-  override def isEffectiveAi(): Boolean = false
+  override def isEffectiveAi: Boolean = false
 
   override def baseTick(): Unit = {
     super.baseTick()
     if this.level().isClientSide then {
-      return;
+      return
     }
     state(
       FaeEntity.behaviorTree,
@@ -69,83 +70,75 @@ class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends
     )
   }
 
-  private def performBehavior(behavior: FaeBehavior): Status = {
+  private def performBehavior(behavior: FaeBehavior): Status =
     behavior match {
-      case FaeBehavior.unknown => {
+      case FaeBehavior.unknown =>
         println("Encountered a behavior without an implementation!")
         Failure
-      }
-      case FaeBehavior.unimplemented => {
+      case FaeBehavior.unimplemented =>
         println("Encountered unimplemented behavior, skipping.")
         Success
-      }
-      case FaeBehavior.is_tired => {
-        if this.level().isNight() then Success else Failure
-      }
-      case FaeBehavior.has_valid_bed => {
+      case FaeBehavior.is_tired =>
+        if this.level().isNight then Success else Failure
+      case FaeBehavior.has_valid_bed =>
         bedPosition match {
           case None => Failure
-          case Some(blockPos) => {
-            val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(blockPos);
+          case Some(blockPos) =>
+            val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(blockPos)
             if blockPos.closerToCenterThan(this.position(), 2.0) && blockState.is(BlockTags.BEDS) && blockState
                 .getValue(BedBlock.OCCUPIED) == false
             then Success
             else Failure
-          }
         }
-      }
-      case FaeBehavior.sleep => {
+      case FaeBehavior.sleep =>
         if this.bedPosition.isDefined then Success else Failure
-      }
-      case FaeBehavior.claim_bed => {
-        val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager()
+      case FaeBehavior.claim_bed =>
+        val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager
         // TODO: instead of finding beds within a distance we should keep record of all beds within the kingdom
         val maybeHome = poiManager.findClosest(holder => holder.is(PoiTypes.HOME),
                                                this.blockPosition(),
                                                48,
                                                PoiManager.Occupancy.HAS_SPACE
         )
-        if maybeHome.isPresent() then {
+        if maybeHome.isPresent then {
           val takenPOI = poiManager.take(holder => holder.is(PoiTypes.HOME), (_, _) => true, maybeHome.get, 32)
-          bedPosition = if takenPOI.isPresent() then Some(takenPOI.get) else None
+          bedPosition = if takenPOI.isPresent then Some(takenPOI.get) else None
           bedPosition match {
             case Some(value) => Success
             case None        => Failure
           }
         } else Failure
-      }
     }
-  }
 
   override def die(damageSource: DamageSource): Unit = {
     println("*dies*")
     super.die(damageSource)
     if this.level().isClientSide then {
-      return;
+      return
     }
     val serverLevel = this.level().asInstanceOf[ServerLevel]
 
-    val poiManager: PoiManager = serverLevel.getPoiManager();
+    val poiManager: PoiManager = serverLevel.getPoiManager
     val optional = bedPosition match {
       case Some(blockPos) => poiManager.getType(blockPos)
       case None           => Optional.empty()
     }
-    if optional.isPresent() then {
-      poiManager.release(bedPosition.get);
-      // TODO: Copypasta, what is this?
-      DebugPackets.sendPoiTicketCountPacket(serverLevel, bedPosition.get);
+    if optional.isPresent then {
+      poiManager.release(bedPosition.get)
+      // TODO: Copy-pasta, what is this?
+      DebugPackets.sendPoiTicketCountPacket(serverLevel, bedPosition.get)
     }
   }
 
-  var bedPosition: Option[BlockPos] = Option.empty
+  private var bedPosition: Option[BlockPos] = Option.empty
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {
-    super.addAdditionalSaveData(compoundTag);
+    super.addAdditionalSaveData(compoundTag)
     bedPosition.foreach(pos => compoundTag.put(FaeEntity.BED_POSITION_NBT_KEY, NbtUtils.writeBlockPos(bedPosition.get)))
   }
 
   override def readAdditionalSaveData(compoundTag: CompoundTag): Unit = {
-    super.readAdditionalSaveData(compoundTag);
+    super.readAdditionalSaveData(compoundTag)
     if compoundTag.contains(FaeEntity.BED_POSITION_NBT_KEY) then {
       this.bedPosition = Some(
         NbtUtils.readBlockPos(
@@ -157,21 +150,20 @@ class FaeEntity(entityType: EntityType[? <: LivingEntity], world: Level) extends
 }
 
 object FaeEntity {
-  val BED_POSITION_NBT_KEY = "bedPosition"
+  private val BED_POSITION_NBT_KEY = "bedPosition"
 
   final val TYPE: Supplier[EntityType[FaeEntity]] = Suppliers.memoize(() =>
     EntityType.Builder
       .of[FaeEntity](new FaeEntity(_, _), MobCategory.MISC)
       .sized(0.98f, 0.7f)
       .build("fae_entity")
-  );
+  )
 
-  def createAttributes(): AttributeSupplier.Builder = {
+  def createAttributes(): AttributeSupplier.Builder =
     LivingEntity
       .createLivingAttributes()
       .add(Attributes.MAX_HEALTH, 10.0)
       .add(Attributes.MOVEMENT_SPEED, 0.2f)
-  }
 
-  val behaviorTree: Node[FaeBehavior] = FaeBehaviorTree.root
+  private val behaviorTree: Node[FaeBehavior] = FaeBehaviorTree.root
 }

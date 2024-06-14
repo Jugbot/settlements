@@ -15,9 +15,9 @@ enum FaeBehavior {
 }
 
 object FaeBehaviorTree {
-  val root: Node[FaeBehavior] = SequenceNode()
-  val survival = SequenceNode()
-  val sleep = SequenceNode(
+  private val goToBlock = ActionNode(FaeBehavior.unimplemented)
+  private val claimBed = ActionNode(FaeBehavior.claim_bed)
+  private val sleep = SequenceNode(
     ActionNode(FaeBehavior.is_tired),
     SelectorNode(
       ActionNode(FaeBehavior.has_valid_bed),
@@ -26,6 +26,6 @@ object FaeBehaviorTree {
     goToBlock,
     ActionNode(FaeBehavior.sleep)
   )
-  val goToBlock = ActionNode(FaeBehavior.unimplemented)
-  val claimBed = ActionNode(FaeBehavior.claim_bed)
+  private val survival = SequenceNode(sleep)
+  val root: Node[FaeBehavior] = SequenceNode(survival)
 }

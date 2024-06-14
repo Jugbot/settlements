@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.EnumModule
 
+import java.util
 import java.util.Arrays
 import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.jdk.CollectionConverters.MapHasAsJava
@@ -30,8 +31,8 @@ type T = Any
 
 class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with ContextualDeserializer {
 
-  private var genericType: JavaType = null;
-  private var genericDeserializer: JsonDeserializer[Object] = null
+  private var genericType: JavaType = _
+  private var genericDeserializer: JsonDeserializer[Object] = _
 
   def this(
     genericType: JavaType,
@@ -46,23 +47,21 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
     p: JsonParser,
     ctxt: DeserializationContext
   ): Seq[Node[T]] = {
-    if p.getCurrentToken() != JsonToken.START_ARRAY then {
+    if p.getCurrentToken != JsonToken.START_ARRAY then {
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
     }
     p.nextToken()
     var children = Seq[Node[Any]]()
-    while p.currentToken() != JsonToken.END_ARRAY do {
-      children :+= deserializeObjPart(p, ctxt)
-    }
+    while p.currentToken() != JsonToken.END_ARRAY do children :+= deserializeObjPart(p, ctxt)
     p.nextToken()
-    return children
+    children
   }
 
   private def deserializeObjPart(
     p: JsonParser,
     ctxt: DeserializationContext
   ): Node[T] = {
-    if p.getCurrentToken() != JsonToken.START_OBJECT then {
+    if p.getCurrentToken != JsonToken.START_OBJECT then {
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
     }
     if p.nextToken() != JsonToken.FIELD_NAME then {
@@ -94,21 +93,20 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected END_OBJECT")
     }
     p.nextToken()
-    return node
+    node
   }
 
   override def deserialize(
     p: JsonParser,
     ctxt: DeserializationContext
-  ): Node[T] = {
-    return deserializeObjPart(p, ctxt)
-  }
+  ): Node[T] =
+    deserializeObjPart(p, ctxt)
 
   override def createContextual(
     ctxt: DeserializationContext,
     property: BeanProperty
   ): JsonDeserializer[Node[T]] = {
-    val contextualType: JavaType = ctxt.getContextualType()
+    val contextualType: JavaType = ctxt.getContextualType
 
     val typeParameters: List[JavaType] =
       List.from(contextualType.getBindings.getTypeParameters.asScala)
@@ -116,11 +114,11 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
       throw new IllegalStateException("size should be 1")
     }
 
-    val genericType: JavaType = typeParameters(0)
+    val genericType: JavaType = typeParameters.head
 
     val genericDeserializer: JsonDeserializer[Object] =
       ctxt.findContextualValueDeserializer(genericType, property)
-    return NodeDeserializer(genericType, genericDeserializer)
+    NodeDeserializer(genericType, genericDeserializer)
   }
 }
 
@@ -150,11 +148,11 @@ object BTModule
       Map(
         classOf[Node[Any]] -> new NodeDeserializer()
       ).asJava,
-      Arrays.asList(NodeSerializer)
+      util.Arrays.asList(NodeSerializer)
     )
 
 object BTMapper {
-  val mapper = JsonMapper
+  val mapper: JsonMapper = JsonMapper
     .builder()
     .addModule(DefaultScalaModule)
     .addModule(EnumModule)

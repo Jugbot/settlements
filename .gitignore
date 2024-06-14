@@ -38,13 +38,6 @@ replay_*.log
 *.hprof
 *.jfr
 
-# java
-
-hs_err_*.log
-replay_*.log
-*.hprof
-*.jfr
-
 # scala
 
 .metals/

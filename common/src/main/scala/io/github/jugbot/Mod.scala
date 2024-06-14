@@ -1,4 +1,4 @@
-package io.github.jugbot;
+package io.github.jugbot
 
 import dev.architectury.registry.client.level.entity.EntityModelLayerRegistry
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry
@@ -10,11 +10,11 @@ import net.fabricmc.api.Environment
 import org.apache.logging.log4j.LogManager
 
 object Mod {
-  final val MOD_ID = "settlements";
+  final val MOD_ID = "settlements"
 
   private val LOGGER = LogManager.getLogger
 
-  def initialize() = {
+  def initialize(): Unit = {
     LOGGER.info("Hello World!")
     Registries.initialize()
   }
@@ -30,7 +30,7 @@ object Mod {
       EntityRendererRegistry.register(
         Registries.FAE_ENTITY,
         new FaeRenderer(_)
-      );
+      )
     }
   }
 }
