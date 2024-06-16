@@ -62,7 +62,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
 
   override def isEffectiveAi: Boolean = false
 
-  override def baseTick(): Unit = {
+  override def tick(): Unit = {
     super.baseTick()
     if this.level().isClientSide then {
       return
@@ -74,6 +74,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
   }
 
   private def performBehavior(behavior: FaeBehavior): Status =
+    println(behavior)
     behavior match {
       case FaeBehavior.unknown =>
         println("Encountered a behavior without an implementation!")
@@ -83,12 +84,12 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
         Success
       case FaeBehavior.is_tired =>
         if this.level().isNight then Success else Failure
-      case FaeBehavior.has_valid_bed =>
+      case FaeBehavior.has(_) =>
         bedPosition match {
           case None => Failure
           case Some(blockPos) =>
             val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(blockPos)
-            if blockPos.closerToCenterThan(this.position(), 2.0) && blockState.is(BlockTags.BEDS) && blockState
+            if blockState.is(BlockTags.BEDS) && blockState
                 .getValue(BedBlock.OCCUPIED) == false
             then Success
             else Failure
@@ -111,7 +112,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
             case None        => Failure
           }
         } else Failure
-      case FaeBehavior.is_at_location =>
+      case FaeBehavior.is_at_location(_) =>
         bedPosition match {
           // Copied from SleepInBed Goal
           // TODO: do not hardcode bedPosition
@@ -120,18 +121,18 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
             else Failure
           case None => Failure
         }
-      case FaeBehavior.has_nav_path =>
+      case FaeBehavior.has_nav_path_to(_) =>
         if this.getNavigation.isInProgress then Success else Failure
-      case FaeBehavior.get_nav_path =>
+      case FaeBehavior.create_nav_path_to(_) =>
         bedPosition match {
           case Some(blockPos) =>
             this.getNavigation.createPath(blockPos, 42)
             Success
           case None => Failure
         }
-      case FaeBehavior.path_unobstructed =>
+      case FaeBehavior.current_path_unobstructed =>
         if this.getNavigation.isStuck then Failure else Success
-      case FaeBehavior.move_along_path   =>
+      case FaeBehavior.move_along_current_path =>
         this.getNavigation.tick()
         Success
     }
@@ -189,6 +190,7 @@ object FaeEntity {
       .createLivingAttributes()
       .add(Attributes.MAX_HEALTH, 10.0)
       .add(Attributes.MOVEMENT_SPEED, 0.2f)
+      .add(Attributes.FOLLOW_RANGE, 20f)
 
   private val behaviorTree: Node[FaeBehavior] = FaeBehaviorTree.root
 }
