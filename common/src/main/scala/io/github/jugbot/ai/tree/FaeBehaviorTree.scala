@@ -19,7 +19,7 @@ enum FaeBehavior(args: String*) {
   case move_along_current_path
 }
 
-object FaeBehavior {  
+object FaeBehavior {
   def valueOf(jsonValue: String): FaeBehavior = {
     val tokens = jsonValue.split("""[\(\),]""").toList
 
@@ -27,9 +27,9 @@ object FaeBehavior {
     tokens match {
       case behaviorType :: args =>
         behaviorType match {
-          case "unimplemented" => FaeBehavior.unimplemented
+          case "unimplemented"           => FaeBehavior.unimplemented
           case "has" if args.length >= 1 => FaeBehavior.has(args(0))
-          case _        => FaeBehavior.unknown
+          case _                         => FaeBehavior.unknown
         }
       case _ => FaeBehavior.unknown
     }
@@ -40,7 +40,9 @@ object FaeBehaviorTree {
   private val goToBlock: Node[FaeBehavior] = SelectorNode(
     ActionNode(FaeBehavior.is_at_location("bed_position")),
     SequenceNode(
-      SelectorNode(ActionNode(FaeBehavior.has_nav_path_to("bed_position")), ActionNode(FaeBehavior.create_nav_path_to("bed_position"))),
+      SelectorNode(ActionNode(FaeBehavior.has_nav_path_to("bed_position")),
+                   ActionNode(FaeBehavior.create_nav_path_to("bed_position"))
+      ),
       ActionNode(FaeBehavior.current_path_unobstructed),
       ActionNode(FaeBehavior.move_along_current_path)
     )
