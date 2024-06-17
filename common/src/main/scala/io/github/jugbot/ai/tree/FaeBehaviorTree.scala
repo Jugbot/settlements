@@ -4,8 +4,6 @@ import io.github.jugbot.ai.SequenceNode
 import io.github.jugbot.ai.Node
 import io.github.jugbot.ai.ActionNode
 import io.github.jugbot.ai.SelectorNode
-import scala.reflect.ClassTag
-import scala.deriving.Mirror
 
 enum FaeBehavior(args: String*) {
   case unknown
@@ -20,6 +18,7 @@ enum FaeBehavior(args: String*) {
   case current_path_unobstructed
   case move_along_current_path
 }
+
 object FaeBehavior {  
   def valueOf(jsonValue: String): FaeBehavior = {
     val tokens = jsonValue.split("""[\(\),]""").toList
