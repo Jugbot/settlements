@@ -74,8 +74,8 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
     )
   }
 
-  private val blackboard: Map[String, Option[Any]] = Map(
-    BlackboardKey.BED_POSITION -> this.bedPosition
+  private val blackboard: Map[BlackboardKey, Option[Any]] = Map(
+    BlackboardKey.bed_position -> this.bedPosition
   )
 
   private def performBehavior(behavior: FaeBehavior): Status =
