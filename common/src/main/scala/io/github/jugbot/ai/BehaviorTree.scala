@@ -9,6 +9,7 @@ case class SelectorNode[A](children: Node[A]*) extends Node[A]
 sealed trait Status
 case object Success extends Status
 case object Failure extends Status
+case object Running extends Status
 
 // Method for running nodes
 def state[A](node: Node[A], action: Function[A, Status]): Status = node match {
@@ -24,7 +25,7 @@ private def runSequence[A](
 ): Status =
   nodes.foldLeft[Status](Success) { (acc, node) =>
     if acc == Success then cb(node)
-    else Failure
+    else acc
   }
 
 // Method for running selector nodes
@@ -34,5 +35,5 @@ private def runSelector[A](
 ): Status =
   nodes.foldLeft[Status](Failure) { (acc, node) =>
     if acc == Failure then cb(node)
-    else Success
+    else acc
   }

@@ -36,12 +36,16 @@ object FaeBehavior {
   }
 }
 
+object BlackboardKey {
+  val BED_POSITION = "bed_position"
+}
+
 object FaeBehaviorTree {
-  private val goToBlock: Node[FaeBehavior] = SelectorNode(
-    ActionNode(FaeBehavior.is_at_location("bed_position")),
+  private def goToBlock(key: String): Node[FaeBehavior] = SelectorNode(
+    ActionNode(FaeBehavior.is_at_location(key)),
     SequenceNode(
-      SelectorNode(ActionNode(FaeBehavior.has_nav_path_to("bed_position")),
-                   ActionNode(FaeBehavior.create_nav_path_to("bed_position"))
+      SelectorNode(ActionNode(FaeBehavior.has_nav_path_to(key)),
+                   ActionNode(FaeBehavior.create_nav_path_to(key))
       ),
       ActionNode(FaeBehavior.current_path_unobstructed),
       ActionNode(FaeBehavior.move_along_current_path)
@@ -51,10 +55,10 @@ object FaeBehaviorTree {
   private val sleep = SequenceNode(
     ActionNode(FaeBehavior.is_tired),
     SelectorNode(
-      ActionNode(FaeBehavior.has("bed_position")),
+      ActionNode(FaeBehavior.has(BlackboardKey.BED_POSITION)),
       claimBed
     ),
-    goToBlock,
+    goToBlock(BlackboardKey.BED_POSITION),
     ActionNode(FaeBehavior.sleep)
   )
   private val survival = SequenceNode(sleep)

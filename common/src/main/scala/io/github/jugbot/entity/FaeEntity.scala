@@ -39,6 +39,7 @@ import net.minecraft.world.damagesource.DamageSource
 import java.util.Optional
 import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation
+import io.github.jugbot.ai.tree.BlackboardKey
 
 class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(entityType, world) {
 
@@ -73,6 +74,10 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
     )
   }
 
+  private val blackboard: Map[String, Option[Any]] = Map(
+    BlackboardKey.BED_POSITION -> this.bedPosition
+  )
+
   private def performBehavior(behavior: FaeBehavior): Status =
     println(behavior)
     behavior match {
@@ -84,15 +89,10 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
         Success
       case FaeBehavior.is_tired =>
         if this.level().isNight then Success else Failure
-      case FaeBehavior.has(_) =>
-        bedPosition match {
-          case None => Failure
-          case Some(blockPos) =>
-            val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(blockPos)
-            if blockState.is(BlockTags.BEDS) && blockState
-                .getValue(BedBlock.OCCUPIED) == false
-            then Success
-            else Failure
+      case FaeBehavior.has(key) =>
+        blackboard.get(key).flatten match {
+          case Some(_) => Success
+          case _       => Failure
         }
       case FaeBehavior.sleep =>
         if this.bedPosition.isDefined then Success else Failure
@@ -112,23 +112,26 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
             case None        => Failure
           }
         } else Failure
-      case FaeBehavior.is_at_location(_) =>
-        bedPosition match {
-          // Copied from SleepInBed Goal
-          // TODO: do not hardcode bedPosition
-          case Some(blockPos) =>
-            if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.14) then Success
-            else Failure
-          case None => Failure
+      case FaeBehavior.is_at_location(key) =>
+        blackboard.get(key).flatten match {
+          case Some(blockPos: BlockPos)
+              if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.14) =>
+            Success
+          case _ => Failure
         }
-      case FaeBehavior.has_nav_path_to(_) =>
-        if this.getNavigation.isInProgress then Success else Failure
-      case FaeBehavior.create_nav_path_to(_) =>
-        bedPosition match {
-          case Some(blockPos) =>
+      case FaeBehavior.has_nav_path_to(key) =>
+        blackboard.get(key).flatten match {
+          case Some(blockPos: BlockPos)
+              if this.getNavigation.getTargetPos() == blockPos && this.getNavigation.isInProgress =>
+            Success
+          case _ => Failure
+        }
+      case FaeBehavior.create_nav_path_to(key) =>
+        blackboard.get(key).flatten match {
+          case Some(blockPos: BlockPos) =>
             this.getNavigation.createPath(blockPos, 42)
             Success
-          case None => Failure
+          case _ => Failure
         }
       case FaeBehavior.current_path_unobstructed =>
         if this.getNavigation.isStuck then Failure else Success
