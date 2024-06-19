@@ -57,10 +57,6 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
 
   override def doPush(entity: Entity): Unit = {}
 
-  override def attackable(): Boolean = false
-
-  override def isEffectiveAi: Boolean = false
-
   override def tick(): Unit = {
     super.tick()
     if this.level().isClientSide then {
