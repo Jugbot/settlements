@@ -16,6 +16,7 @@ enum FaeBehavior(args: BlackboardKey*) {
   case is_tired
   case has(key: BlackboardKey) extends FaeBehavior(key)
   case claim_bed
+  case bed_is_valid
   case is_at_location(destinationKey: BlackboardKey) extends FaeBehavior(destinationKey)
   case has_nav_path_to(destinationKey: BlackboardKey) extends FaeBehavior(destinationKey)
   case create_nav_path_to(destinationKey: BlackboardKey) extends FaeBehavior(destinationKey)
@@ -25,7 +26,7 @@ enum FaeBehavior(args: BlackboardKey*) {
 
 object FaeBehavior {
   def valueOf(jsonValue: String): FaeBehavior = {
-    val tokens = jsonValue.split("""[\(\),]""").toList
+    val tokens = jsonValue.split("""[(),]""").toList
 
     // TODO: This could probably be done automatically using reflection or macros
     tokens match {
@@ -54,7 +55,10 @@ object FaeBehaviorTree {
   private val sleep = SequenceNode(
     ActionNode(FaeBehavior.is_tired),
     SelectorNode(
-      ActionNode(FaeBehavior.has(BlackboardKey.bed_position)),
+      SequenceNode(
+        ActionNode(FaeBehavior.has(BlackboardKey.bed_position)),
+        ActionNode(FaeBehavior.bed_is_valid)
+      ),
       claimBed
     ),
     goToBlock(BlackboardKey.bed_position),

@@ -52,9 +52,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
     equipmentSlot: EquipmentSlot,
     itemStack: ItemStack
   ): Unit = {}
-
-  override def getMainArm: HumanoidArm = HumanoidArm.RIGHT
-
+  
   override def isPushable: Boolean = false
 
   override def doPush(entity: Entity): Unit = {}
@@ -64,7 +62,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
   override def isEffectiveAi: Boolean = false
 
   override def tick(): Unit = {
-    super.baseTick()
+    super.tick()
     if this.level().isClientSide then {
       return
     }
@@ -74,12 +72,12 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
     )
   }
 
-  private val blackboard: Map[BlackboardKey, Option[Any]] = Map(
-    BlackboardKey.bed_position -> this.bedPosition
-  )
+  private def getBlackboard(key: BlackboardKey): Option[Any] =
+    key match {
+      case BlackboardKey.bed_position => this.bedPosition
+    }
 
   private def performBehavior(behavior: FaeBehavior): Status =
-    println(behavior)
     behavior match {
       case FaeBehavior.unknown =>
         println("Encountered a behavior without an implementation!")
@@ -90,47 +88,48 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
       case FaeBehavior.is_tired =>
         if this.level().isNight then Success else Failure
       case FaeBehavior.has(key) =>
-        blackboard.get(key).flatten match {
+        getBlackboard(key) match {
           case Some(_) => Success
           case _       => Failure
         }
       case FaeBehavior.sleep =>
         if this.bedPosition.isDefined then Success else Failure
+      case FaeBehavior.bed_is_valid =>
+        val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(bedPosition.get)
+        if blockState.is(BlockTags.BEDS) && blockState
+            .getValue(BedBlock.OCCUPIED) == false
+        then Success
+        else Failure
       case FaeBehavior.claim_bed =>
         val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager
         // TODO: instead of finding beds within a distance we should keep record of all beds within the kingdom
-        val maybeHome = poiManager.findClosest(holder => holder.is(PoiTypes.HOME),
-                                               this.blockPosition(),
-                                               48,
-                                               PoiManager.Occupancy.HAS_SPACE
-        )
-        if maybeHome.isPresent then {
-          val takenPOI = poiManager.take(holder => holder.is(PoiTypes.HOME), (_, _) => true, maybeHome.get, 32)
-          bedPosition = if takenPOI.isPresent then Some(takenPOI.get) else None
-          bedPosition match {
-            case Some(value) => Success
-            case None        => Failure
-          }
-        } else Failure
+        val takenPOI = poiManager.take(holder => holder.is(PoiTypes.HOME), (_, _) => true, this.blockPosition, 32)
+        bedPosition = if takenPOI.isPresent then Some(takenPOI.get) else None
+        bedPosition match {
+          case Some(value) => Success
+          case None        => Failure
+        }
       case FaeBehavior.is_at_location(key) =>
-        blackboard.get(key).flatten match {
+        getBlackboard(key) match {
           case Some(blockPos: BlockPos)
               if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.14) =>
             Success
           case _ => Failure
         }
       case FaeBehavior.has_nav_path_to(key) =>
-        blackboard.get(key).flatten match {
+        getBlackboard(key) match {
           case Some(blockPos: BlockPos)
-              if this.getNavigation.getTargetPos() == blockPos && this.getNavigation.isInProgress =>
+              if this.getNavigation.getTargetPos != null && blockPos.distManhattan(
+                this.getNavigation.getTargetPos
+              ) <= 1 && this.getNavigation.isInProgress =>
             Success
           case _ => Failure
         }
       case FaeBehavior.create_nav_path_to(key) =>
-        blackboard.get(key).flatten match {
+        getBlackboard(key) match {
           case Some(blockPos: BlockPos) =>
-            this.getNavigation.createPath(blockPos, 42)
-            Success
+            val path = this.getNavigation.createPath(blockPos, 1)
+            if this.getNavigation.moveTo(path, 1) then Success else Failure
           case _ => Failure
         }
       case FaeBehavior.current_path_unobstructed =>
