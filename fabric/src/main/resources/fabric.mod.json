@@ -16,14 +16,10 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      {
-        "value":"io.github.jugbot.fabric.ExampleModFabric"
-      }
+      "io.github.jugbot.fabric.ExampleModFabric"
     ],
     "client": [
-      {
-        "value":"io.github.jugbot.fabric.client.ExampleModFabricClient"
-      }
+      "io.github.jugbot.fabric.client.ExampleModFabricClient"
     ],
     "fabric-gametest": [
       "io.github.jugbot.fabric.gametest.FaeTest"

@@ -1,5 +1,6 @@
 package io.github.jugbot
 
+import dev.architectury.registry.ReloadListenerRegistry
 import dev.architectury.registry.client.level.entity.EntityModelLayerRegistry
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry
 import io.github.jugbot.model.FaeEntityModel

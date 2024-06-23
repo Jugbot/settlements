@@ -40,6 +40,7 @@ import java.util.Optional
 import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation
 import io.github.jugbot.ai.tree.BlackboardKey
+import io.github.jugbot.ai.tree.FaeBehavior
 
 class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(entityType, world) {
 
@@ -80,6 +81,9 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
         Failure
       case FaeBehavior.unimplemented =>
         println("Encountered unimplemented behavior, skipping.")
+        Success
+      case FaeBehavior.tree(key) =>
+        // TODO: return
         Success
       case FaeBehavior.is_tired =>
         if this.level().isNight then Success else Failure
@@ -190,5 +194,5 @@ object FaeEntity {
       .add(Attributes.MOVEMENT_SPEED, 0.2f)
       .add(Attributes.FOLLOW_RANGE, 20f)
 
-  private val behaviorTree: Node[FaeBehavior] = FaeBehaviorTree.root
+  private val behaviorTree: Node[FaeBehavior] = FaeBehaviorTree.map.getOrElse("root", ActionNode(FaeBehavior.unknown))
 }

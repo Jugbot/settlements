@@ -11,3 +11,5 @@
 #### Useful links:
 
 - https://fabricmc.net/wiki/documentation
+- https://github.com/architectury/architectury-api/tree/1.21
+- https://docs.architectury.dev

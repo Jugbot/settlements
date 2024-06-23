@@ -1,9 +1,13 @@
 package io.github.jugbot.ai.tree
 
-import io.github.jugbot.ai.SequenceNode
-import io.github.jugbot.ai.Node
-import io.github.jugbot.ai.ActionNode
-import io.github.jugbot.ai.SelectorNode
+import com.fasterxml.jackson.databind.JavaType
+import io.github.jugbot.ai.{ActionNode, BTMapper, Node, SelectorNode, SequenceNode}
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.packs.resources.{ResourceManager, SimplePreparableReloadListener}
+import net.minecraft.util.profiling.ProfilerFiller
+
+import java.nio.file.Path
+import scala.jdk.CollectionConverters.*
 
 enum BlackboardKey {
   case bed_position
@@ -12,6 +16,7 @@ enum BlackboardKey {
 enum FaeBehavior(args: BlackboardKey*) {
   case unknown
   case unimplemented
+  case tree(name: String)
   case sleep
   case is_tired
   case has(key: BlackboardKey) extends FaeBehavior(key)
@@ -43,27 +48,39 @@ object FaeBehavior {
 }
 
 object FaeBehaviorTree {
-  private def goToBlock(key: BlackboardKey): Node[FaeBehavior] = SelectorNode(
-    ActionNode(FaeBehavior.is_at_location(key)),
-    SequenceNode(
-      SelectorNode(ActionNode(FaeBehavior.has_nav_path_to(key)), ActionNode(FaeBehavior.create_nav_path_to(key))),
-      ActionNode(FaeBehavior.current_path_unobstructed),
-      ActionNode(FaeBehavior.move_along_current_path)
-    )
-  )
-  private val claimBed = ActionNode(FaeBehavior.claim_bed)
-  private val sleep = SequenceNode(
-    ActionNode(FaeBehavior.is_tired),
-    SelectorNode(
-      SequenceNode(
-        ActionNode(FaeBehavior.has(BlackboardKey.bed_position)),
-        ActionNode(FaeBehavior.bed_is_valid)
-      ),
-      claimBed
-    ),
-    goToBlock(BlackboardKey.bed_position),
-    ActionNode(FaeBehavior.sleep)
-  )
-  private val survival = SequenceNode(sleep)
-  val root: Node[FaeBehavior] = SequenceNode(survival)
+  private var behaviorTreeMap: Map[String, Node[FaeBehavior]] = Map()
+  val map: Map[String, Node[FaeBehavior]] = behaviorTreeMap
+
+//  private val location = new ResourceLocation("behavior/fae")
+  private val extension_regex = "\\.json5?$"
+
+  object Loader extends SimplePreparableReloadListener[Map[String, Node[FaeBehavior]]] {
+    private def deserializeJson(raw: String): Node[FaeBehavior] = {
+      val javaType: JavaType =
+        BTMapper.mapper.getTypeFactory.constructType(classOf[FaeBehavior])
+
+      val typeRef = BTMapper.mapper.getTypeFactory
+        .constructSimpleType(classOf[Node[?]], Array(javaType))
+
+      BTMapper.mapper.readValue(raw, typeRef)
+    }
+
+    override def prepare(resourceManager: ResourceManager,
+                         profilerFiller: ProfilerFiller
+    ): Map[String, Node[FaeBehavior]] = {
+      val resourceMap = resourceManager
+        .listResources("behavior", location => location.getPath.matches(extension_regex))
+        .asScala
+      val btMap = resourceMap.map { case (key, value) =>
+        (Path.of(key.getPath).getFileName.toString.replaceAll(extension_regex, ""), deserializeJson(value.toString))
+      }
+      btMap.toMap
+    }
+
+    override def apply(map: Map[String, Node[FaeBehavior]],
+                       resourceManager: ResourceManager,
+                       profilerFiller: ProfilerFiller
+    ): Unit =
+      FaeBehaviorTree.behaviorTreeMap = map
+  }
 }
