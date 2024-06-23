@@ -24,6 +24,9 @@
       {
         "value":"io.github.jugbot.fabric.client.ExampleModFabricClient"
       }
+    ],
+    "fabric-gametest": [
+      "io.github.jugbot.fabric.gametest.FaeTest"
     ]
   },
   "mixins": [
@@ -34,11 +37,7 @@
     "minecraft": "~1.20.1",
     "java": ">=21",
     "architectury": ">=9.2.14",
+    "kotori_scala": ">=1.0.0",
     "fabric-api": "*"
-  },
-  "suggests": {
-  },
-  "requires": {
-    "kotori_scala": ">=1.0.0"
   }
 }

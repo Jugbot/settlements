@@ -52,7 +52,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
     equipmentSlot: EquipmentSlot,
     itemStack: ItemStack
   ): Unit = {}
-  
+
   override def isPushable: Boolean = false
 
   override def doPush(entity: Entity): Unit = {}

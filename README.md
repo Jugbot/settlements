@@ -7,3 +7,7 @@
 #### Gotchas
 
 - When generating sources, you may have to manually reimport the build to metals if you are using vscode.
+
+#### Useful links:
+
+- https://fabricmc.net/wiki/documentation

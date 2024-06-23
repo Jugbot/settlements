@@ -44,3 +44,7 @@ replay_*.log
 .bloop/
 .bsp
 .history
+
+# architectury
+
+.architectury-transformer/

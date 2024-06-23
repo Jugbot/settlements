@@ -12,7 +12,7 @@ import org.apache.logging.log4j.LogManager
 object Mod {
   final val MOD_ID = "settlements"
 
-  private val LOGGER = LogManager.getLogger
+  val LOGGER = LogManager.getLogger
 
   def initialize(): Unit = {
     LOGGER.info("Hello World!")
