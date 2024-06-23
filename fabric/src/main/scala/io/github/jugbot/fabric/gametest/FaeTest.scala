@@ -8,7 +8,7 @@ import net.minecraft.gametest.framework.{GameTest, GameTestHelper}
 class FaeTest extends FabricGameTest {
   @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
   def doesSpawn(helper: GameTestHelper): Unit = {
-    val spawnPos = new BlockPos(0,0,0)
+    val spawnPos = new BlockPos(0, 0, 0)
     val entity = helper.spawn(FaeEntity.TYPE.get(), spawnPos)
     helper.assertEntityInstancePresent(entity, spawnPos)
     helper.succeed()
