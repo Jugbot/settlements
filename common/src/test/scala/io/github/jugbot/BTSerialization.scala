@@ -1,39 +1,9 @@
 package io.github.jugbot
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonFormat.Feature
-import com.fasterxml.jackson.annotation.JsonRawValue
-import com.fasterxml.jackson.annotation.JsonSetter
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
-import com.fasterxml.jackson.annotation.JsonValue
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.`type`.TypeReference
-import com.fasterxml.jackson.core.json.JsonReadFeature
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JavaType
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.json.JsonMapper
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.fasterxml.jackson.module.scala.EnumModule
-import io.github.jugbot.ai.ActionNode
-import io.github.jugbot.ai.BTMapper
-import io.github.jugbot.ai.BTModule
-import io.github.jugbot.ai.Failure
-import io.github.jugbot.ai.Node
-import io.github.jugbot.ai.SelectorNode
-import io.github.jugbot.ai.SequenceNode
-import io.github.jugbot.ai.Status
-import io.github.jugbot.ai.Success
-import io.github.jugbot.ai.state
+import io.github.jugbot.ai.*
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-
-import scala.annotation.targetName
 
 enum ExampleBehavior(args: String*) {
   case unknown

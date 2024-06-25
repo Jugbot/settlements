@@ -1,5 +1,7 @@
 {
   sequence: [
-    "action(sleep)"
+    {
+      action: "survival"
+    }
   ]
 }

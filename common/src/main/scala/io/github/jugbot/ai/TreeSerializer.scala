@@ -146,7 +146,7 @@ object BTModule
       "BTModule",
       new Version(1, 0, 0, null, "io.github.jugbot", "settlements"),
       Map(
-        classOf[Node[Any]] -> new NodeDeserializer()
+        classOf[Node[?]] -> new NodeDeserializer()
       ).asJava,
       util.Arrays.asList(NodeSerializer)
     )

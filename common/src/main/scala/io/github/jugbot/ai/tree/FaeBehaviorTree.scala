@@ -1,13 +1,15 @@
 package io.github.jugbot.ai.tree
 
 import com.fasterxml.jackson.databind.JavaType
-import io.github.jugbot.ai.{ActionNode, BTMapper, Node, SelectorNode, SequenceNode}
-import net.minecraft.resources.ResourceLocation
+import com.fasterxml.jackson.databind.Module
+import io.github.jugbot.ai.{ActionNode, BTMapper, Node}
 import net.minecraft.server.packs.resources.{ResourceManager, SimplePreparableReloadListener}
 import net.minecraft.util.profiling.ProfilerFiller
-
+import io.github.jugbot.Mod.LOGGER
+import java.io.Reader
 import java.nio.file.Path
 import scala.jdk.CollectionConverters.*
+import scala.util.{Failure, Success, Try}
 
 enum BlackboardKey {
   case bed_position
@@ -51,28 +53,36 @@ object FaeBehaviorTree {
   private var behaviorTreeMap: Map[String, Node[FaeBehavior]] = Map()
   val map: Map[String, Node[FaeBehavior]] = behaviorTreeMap
 
-//  private val location = new ResourceLocation("behavior/fae")
-  private val extension_regex = "\\.json5?$"
+  private val extension_regex = """^.*\.json5?$""".r
 
   object Loader extends SimplePreparableReloadListener[Map[String, Node[FaeBehavior]]] {
-    private def deserializeJson(raw: String): Node[FaeBehavior] = {
+    private def deserializeJson(reader: Reader): Node[FaeBehavior] = {
       val javaType: JavaType =
         BTMapper.mapper.getTypeFactory.constructType(classOf[FaeBehavior])
 
       val typeRef = BTMapper.mapper.getTypeFactory
         .constructSimpleType(classOf[Node[?]], Array(javaType))
 
-      BTMapper.mapper.readValue(raw, typeRef)
+      Try[Node[FaeBehavior]](BTMapper.mapper.readValue(reader, typeRef)) match {
+        case Success(value) => value
+        case Failure(exception) =>
+          LOGGER.warn("Unable to parse custom behavior.")
+          LOGGER.warn(exception)
+          ActionNode(FaeBehavior.unknown)
+      }
     }
 
     override def prepare(resourceManager: ResourceManager,
                          profilerFiller: ProfilerFiller
     ): Map[String, Node[FaeBehavior]] = {
       val resourceMap = resourceManager
-        .listResources("behavior", location => location.getPath.matches(extension_regex))
+        .listResources("behavior/fae", location => extension_regex.matches(location.getPath))
         .asScala
       val btMap = resourceMap.map { case (key, value) =>
-        (Path.of(key.getPath).getFileName.toString.replaceAll(extension_regex, ""), deserializeJson(value.toString))
+        val fileName = Path.of(key.getPath).getFileName.toString
+        val name = fileName.substring(0, fileName.lastIndexOf('.'))
+        val btNode = deserializeJson(value.openAsReader)
+        (name, btNode)
       }
       btMap.toMap
     }
