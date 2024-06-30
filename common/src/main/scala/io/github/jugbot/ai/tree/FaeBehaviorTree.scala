@@ -1,11 +1,11 @@
 package io.github.jugbot.ai.tree
 
 import com.fasterxml.jackson.databind.JavaType
-import com.fasterxml.jackson.databind.Module
+import io.github.jugbot.Mod.LOGGER
 import io.github.jugbot.ai.{ActionNode, BTMapper, Node}
 import net.minecraft.server.packs.resources.{ResourceManager, SimplePreparableReloadListener}
 import net.minecraft.util.profiling.ProfilerFiller
-import io.github.jugbot.Mod.LOGGER
+
 import java.io.Reader
 import java.nio.file.Path
 import scala.jdk.CollectionConverters.*
