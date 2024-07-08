@@ -33,14 +33,12 @@ object ExampleBehavior {
 
 class BTSerialization extends AnyFunSuite with Matchers {
   val jsonFixture: String = """{
-                              |  "sequence" : [ {
-                              |    "action" : "eat(bagel)"
-                              |  }, {
-                              |    "action" : "re_eat(bagel)"
-                              |  }, {
-                              |    "selector" : [ {
-                              |      "action" : "sleep"
-                              |    } ]
+                              |  "sequence" : [
+                              |    "eat(bagel)",
+                              |    "re_eat(bagel)", {
+                              |    "selector" : [
+                              |      "sleep"
+                              |    ]
                               |  } ]
                               |}""".stripMargin
 
@@ -88,7 +86,7 @@ class BTSerialization extends AnyFunSuite with Matchers {
 
     val typeRef = BTMapper.mapper.getTypeFactory
       .constructSimpleType(classOf[Node[?]], Array(javaType))
-    println(typeRef.toString)
+
     val result: Node[ExampleBehavior] =
       BTMapper.mapper.readValue(jsonFixture, typeRef)
 

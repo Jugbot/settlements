@@ -1,35 +1,29 @@
 package io.github.jugbot.ai
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonToken
-import com.fasterxml.jackson.core.StreamReadFeature
-import com.fasterxml.jackson.core.Version
+import com.fasterxml.jackson.core.{JsonGenerator, JsonParser, JsonToken, StreamReadFeature, Version}
 import com.fasterxml.jackson.core.json.JsonReadFeature
-import com.fasterxml.jackson.databind.BeanProperty
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.JavaType
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.{
+  BeanProperty,
+  DeserializationContext,
+  DeserializationFeature,
+  JavaType,
+  JsonDeserializer,
+  SerializationFeature,
+  SerializerProvider
+}
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.fasterxml.jackson.module.scala.EnumModule
+import com.fasterxml.jackson.module.scala.{DefaultScalaModule, EnumModule}
 
 import java.util
-import java.util.Arrays
-import scala.jdk.CollectionConverters.ListHasAsScala
-import scala.jdk.CollectionConverters.MapHasAsJava
+import scala.jdk.CollectionConverters.{ListHasAsScala, MapHasAsJava}
 
 type T = Any
 
-class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with ContextualDeserializer {
+class NodeDeserializer extends StdDeserializer[Node](classOf[Node]) with ContextualDeserializer {
 
   private var genericType: JavaType = _
   private var genericDeserializer: JsonDeserializer[Object] = _
@@ -43,15 +37,27 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
     this.genericDeserializer = genericDeserializer
   }
 
+  private def expectToken(p: JsonParser, ctxt: DeserializationContext, token: JsonToken): Unit =
+    if p.getCurrentToken != token then {
+      throw ctxt.reportBadDefinition(classOf[Node], f"expected $token")
+    }
+
+  private def deserializeStringPart(
+    p: JsonParser,
+    ctxt: DeserializationContext
+  ): Node = {
+    val action = genericDeserializer.deserialize(p, ctxt)
+    // TODO
+    ActionNode(???, Map.empty)
+  }
+
   private def deserializeSeqPart(
     p: JsonParser,
     ctxt: DeserializationContext
-  ): Seq[Node[T]] = {
-    if p.getCurrentToken != JsonToken.START_ARRAY then {
-      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
-    }
+  ): Seq[Node] = {
+    expectToken(p, ctxt, JsonToken.START_ARRAY)
     p.nextToken()
-    var children = Seq[Node[Any]]()
+    var children = Seq[Node]()
     while p.currentToken() != JsonToken.END_ARRAY do children :+= deserializeObjPart(p, ctxt)
     p.nextToken()
     children
@@ -60,52 +66,55 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
   private def deserializeObjPart(
     p: JsonParser,
     ctxt: DeserializationContext
-  ): Node[T] = {
-    if p.getCurrentToken != JsonToken.START_OBJECT then {
-      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
-    }
-    if p.nextToken() != JsonToken.FIELD_NAME then {
-      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected FIELD_NAME")
-    }
+  ): Node = {
+    expectToken(p, ctxt, JsonToken.START_OBJECT)
+    expectToken(p, ctxt, JsonToken.FIELD_NAME)
     val nodeType = p.currentName()
-    val node = nodeType match {
-      case "action" =>
-        p.nextToken()
-        val action = genericDeserializer.deserialize(p, ctxt)
-        p.nextToken()
-        ActionNode[T](action)
+    val node: Node = nodeType match {
       case "selector" =>
         p.nextToken()
         val children = deserializeSeqPart(p, ctxt)
-        SelectorNode[T](children*)
+        SelectorNode(children*)
       case "sequence" =>
         p.nextToken()
         val children = deserializeSeqPart(p, ctxt)
-        SequenceNode[T](children*)
-      case _ =>
-        throw ctxt.weirdKeyException(
-          classOf[Node[T]],
-          nodeType,
-          f"Unexpected key name $nodeType"
-        )
+        SequenceNode(children*)
+      case action =>
+        val args = this._(p, ctxt)
+        ActionNode(action, args)
+
     }
-    if p.currentToken() != JsonToken.END_OBJECT then {
-      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected END_OBJECT")
-    }
+    expectToken(p, ctxt, JsonToken.END_OBJECT)
     p.nextToken()
     node
   }
 
+  private def deserializeAnyPart(
+    p: JsonParser,
+    ctxt: DeserializationContext
+  ): Node | Seq[Node] =
+    p.getCurrentToken match {
+      case JsonToken.START_OBJECT => deserializeObjPart(p, ctxt)
+      case JsonToken.START_ARRAY  => deserializeSeqPart(p, ctxt)
+      case JsonToken.VALUE_STRING => deserializeStringPart(p, ctxt)
+    }
+
   override def deserialize(
     p: JsonParser,
     ctxt: DeserializationContext
-  ): Node[T] =
-    deserializeObjPart(p, ctxt)
+  ): Node =
+    deserializeAnyPart(p, ctxt) match {
+      case (value: Node) => value
+      case Seq(_) =>
+        ctxt.reportBadDefinition(classOf[Seq[Node]],
+                                 "Cannot start a file with an array, either object or string is allowed."
+        )
+    }
 
   override def createContextual(
     ctxt: DeserializationContext,
     property: BeanProperty
-  ): JsonDeserializer[Node[T]] = {
+  ): JsonDeserializer[Node] = {
     val contextualType: JavaType = ctxt.getContextualType
 
     val typeParameters: List[JavaType] =
@@ -122,16 +131,16 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
   }
 }
 
-object NodeSerializer extends StdSerializer[Node[?]](classOf[Node[?]]) {
+object NodeSerializer extends StdSerializer[Node](classOf[Node]) {
   override def serialize(
-    value: Node[?],
+    value: Node,
     gen: JsonGenerator,
     provider: SerializerProvider
   ): Unit = {
     gen.writeStartObject()
     value match {
-      case ActionNode(action) =>
-        provider.defaultSerializeField("action", action, gen);
+      case ActionNode(action, args) =>
+        provider.defaultSerializeField(action, args, gen);
       case SelectorNode(children*) =>
         provider.defaultSerializeField("selector", children, gen);
       case SequenceNode(children*) =>
@@ -146,7 +155,7 @@ object BTModule
       "BTModule",
       new Version(1, 0, 0, null, "io.github.jugbot", "settlements"),
       Map(
-        classOf[Node[?]] -> new NodeDeserializer()
+        classOf[Node] -> new NodeDeserializer()
       ).asJava,
       util.Arrays.asList(NodeSerializer)
     )

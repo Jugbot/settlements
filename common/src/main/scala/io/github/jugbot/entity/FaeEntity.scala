@@ -17,7 +17,6 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation
 import java.lang
 import java.util.function.Supplier
 import java.util as ju
-import io.github.jugbot.ai.state
 import io.github.jugbot.ai.Node
 import io.github.jugbot.ai.ActionNode
 import io.github.jugbot.ai.Failure
@@ -63,10 +62,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
     if this.level().isClientSide then {
       return
     }
-    state(
-      FaeEntity.behaviorTree,
-      this.performBehavior
-    )
+    FaeBehaviorTree.state(this.performBehavior)
   }
 
   private def getBlackboard(key: BlackboardKey): Option[Any] =
@@ -74,21 +70,19 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
       case BlackboardKey.bed_position => this.bedPosition
     }
 
-  private def performBehavior(behavior: FaeBehavior): Status =
-    behavior match {
+  private def performBehavior(behavior: String, args: Map[String, String]): Status =
+    def getBlackboardKey(argName: String): Option[Any] = args.get(argName).map(BlackboardKey.valueOf _).map(getBlackboard _)
+    FaeBehavior.valueOf(behavior) match {
       case FaeBehavior.unknown =>
         println("Encountered a behavior without an implementation!")
         Failure
       case FaeBehavior.unimplemented =>
         println("Encountered unimplemented behavior, skipping.")
         Success
-      case FaeBehavior.tree(key) =>
-        // TODO: return
-        Success
       case FaeBehavior.is_tired =>
         if this.level().isNight then Success else Failure
-      case FaeBehavior.has(key) =>
-        getBlackboard(key) match {
+      case FaeBehavior.has =>
+        getBlackboardKey("key") match {
           case Some(_) => Success
           case _       => Failure
         }
@@ -109,15 +103,15 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
           case Some(value) => Success
           case None        => Failure
         }
-      case FaeBehavior.is_at_location(key) =>
-        getBlackboard(key) match {
+      case FaeBehavior.is_at_location =>
+        getBlackboardKey("key") match {
           case Some(blockPos: BlockPos)
               if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.14) =>
             Success
           case _ => Failure
         }
-      case FaeBehavior.has_nav_path_to(key) =>
-        getBlackboard(key) match {
+      case FaeBehavior.has_nav_path_to =>
+        getBlackboardKey("key") match {
           case Some(blockPos: BlockPos)
               if this.getNavigation.getTargetPos != null && blockPos.distManhattan(
                 this.getNavigation.getTargetPos
@@ -125,8 +119,8 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
             Success
           case _ => Failure
         }
-      case FaeBehavior.create_nav_path_to(key) =>
-        getBlackboard(key) match {
+      case FaeBehavior.create_nav_path_to =>
+        getBlackboardKey("key") match {
           case Some(blockPos: BlockPos) =>
             val path = this.getNavigation.createPath(blockPos, 1)
             if this.getNavigation.moveTo(path, 1) then Success else Failure
@@ -193,6 +187,4 @@ object FaeEntity {
       .add(Attributes.MAX_HEALTH, 10.0)
       .add(Attributes.MOVEMENT_SPEED, 0.2f)
       .add(Attributes.FOLLOW_RANGE, 20f)
-
-  private val behaviorTree: Node[FaeBehavior] = FaeBehaviorTree.map.getOrElse("root", ActionNode(FaeBehavior.unknown))
 }
