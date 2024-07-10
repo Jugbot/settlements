@@ -37,3 +37,26 @@ private def runSelector[A](
     if acc == Failure then cb(node)
     else acc
   }
+
+type Parameters = Map[String, String]
+type References[A] = Map[String, ParameterizedNode[A]]
+
+sealed trait ParameterizedNode[A] extends Node[(A, Parameters)]
+case class ReferenceNode[A](name: String, params: Parameters) extends ParameterizedNode[A]
+
+def run[A](node: ParameterizedNode[A],
+                  perform: Performance[A],
+                  references: References[A] = Map.empty,
+                  parameters: Parameters = Map.empty
+  ): Status = node match {
+    case ReferenceNode(name, args) => {
+      val hydratedArgs = args.map((key, value) => (key, parameters.getOrElse(value, value)))
+      references.get(name) match {
+        case Some(n) => run(n, perform, references, hydratedArgs)
+        case None => perform(name, hydratedArgs)
+      }
+    }
+    case ActionNode(name, args) => 
+      val hydratedArgs = args.map((key, value) => (key, parameters.getOrElse(value, value)))
+      perform(name, hydratedArgs)
+  }
