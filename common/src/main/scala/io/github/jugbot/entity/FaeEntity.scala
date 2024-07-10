@@ -17,7 +17,7 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation
 import java.lang
 import java.util.function.Supplier
 import java.util as ju
-import io.github.jugbot.ai.state
+import io.github.jugbot.ai.run as state
 import io.github.jugbot.ai.Node
 import io.github.jugbot.ai.ActionNode
 import io.github.jugbot.ai.Failure

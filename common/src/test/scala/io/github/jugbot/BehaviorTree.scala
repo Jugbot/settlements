@@ -8,7 +8,7 @@ import io.github.jugbot.ai.SequenceNode
 import io.github.jugbot.ai.Status
 import io.github.jugbot.ai.Success
 import org.scalatest.funsuite.AnyFunSuite
-import io.github.jugbot.ai.state
+import io.github.jugbot.ai.run as state
 import org.scalatest.matchers.should.Matchers
 
 class BehaviorTree extends AnyFunSuite with Matchers {

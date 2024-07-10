@@ -15,7 +15,7 @@ case object Running extends Status
 
 // Method for running nodes
 def run[A](node: Node[A], perform: Perform[A]): Status = node match {
-  case ActionNode(action)           => perform(action)
+  case ActionNode(action)      => perform(action)
   case SequenceNode(children*) => runSequence(children, run(_, perform))
   case SelectorNode(children*) => runSelector(children, run(_, perform))
 }
@@ -39,4 +39,3 @@ private def runSelector[A](
     if acc == Failure then cb(node)
     else acc
   }
-
