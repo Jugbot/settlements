@@ -1,34 +1,20 @@
 package io.github.jugbot.ai
 
-/**
-  * Extension of BehaviorTree that adds support for modularized BTs and module-scoped variables 
-  */
-
 type Parameters = Map[String, String]
 type ParameterizedAction = (String, Parameters)
 type ParameterizedNode = Node[ParameterizedAction]
 type References = Map[String, ParameterizedNode]
 
-// Method for
-//def getState(node: ParameterizedNode,
-//             perform: Perform[ParameterizedAction],
-//             references: References = Map.empty,
-//             parameters: Parameters = Map.empty
-//): Status = node match {
-//  case ActionNode(name, args) =>
-//    val hydratedArgs = args.map((key, value) => (key, parameters.getOrElse(value, value)))
-//    references.get(name) match {
-//      case Some(n) => getState(n, perform, references, hydratedArgs)
-//      case None    => perform(name, hydratedArgs)
-//    }
-//  case SequenceNode(children*) => runSequence(children, getState(_, perform, references, parameters))
-//  case SelectorNode(children*) => runSelector(children, getState(_, perform, references, parameters))
-//}
-
-def getState(node: ParameterizedNode,
-             perform: Perform[ParameterizedAction],
-             references: References = Map.empty
-): Status = {
+/**
+ * Gets the state from a behavior tree, using a graph of subtrees which reference each other
+ * @param root The entrypoint node to the tree/graph
+ * @param perform Performs a behavior according to a string name and map of string parameters
+ * @param references Map of subtrees and their names
+ */
+def runModules(root: ParameterizedNode,
+               perform: Perform[ParameterizedAction],
+               references: References = Map.empty
+): Unit = {
   def cb(name: String, parameters: Parameters, context: Parameters): Status = {
     val hydratedParams = parameters.map((key, value) => (key, context.getOrElse(value, value)))
     references.get(name) match {
@@ -37,5 +23,5 @@ def getState(node: ParameterizedNode,
     }
   }
 
-  run(node, cb(_, _, Map.empty))
+  run(root, cb(_, _, Map.empty))
 }

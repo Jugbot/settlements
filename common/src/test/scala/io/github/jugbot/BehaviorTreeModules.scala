@@ -49,7 +49,7 @@ class BehaviorTreeModules extends AnyFunSuite with Matchers {
       )
     )
 
-    getState(
+    runModules(
       root,
       perform(result),
       Map(
@@ -77,7 +77,7 @@ class BehaviorTreeModules extends AnyFunSuite with Matchers {
       )
     )
 
-    getState(
+    runModules(
       root,
       perform(result),
       Map(

@@ -13,7 +13,7 @@ case object Success extends Status
 case object Failure extends Status
 case object Running extends Status
 
-// Method for running nodes
+// Method for running nodes recursively
 def run[A](node: Node[A], perform: Perform[A]): Status = node match {
   case ActionNode(action)      => perform(action)
   case SequenceNode(children*) => runSequence(children, run(_, perform))
