@@ -1,30 +1,30 @@
 {
   sequence: [
     {
-      action: "is_tired"
+      is_tired: {},
     },
     {
       selector: [
         {
           sequence: [
             {
-              action: "has(bed_position)"
+              has: { value: "bed_position" },
             },
             {
-              action: "bed_is_valid"
-            }
-          ]
+              bed_is_valid: {},
+            },
+          ],
         },
         {
-          action: "claim_bed"
-        }
-      ]
+          claim_bed: {},
+        },
+      ],
     },
     {
-      action: "tree(goToBlock,bed_position)"
+      go_to_block: {
+        blockPos: "bed_position",
+      },
     },
-    {
-      action: "sleep"
-    }
-  ]
+    { sleep: {} },
+  ],
 }

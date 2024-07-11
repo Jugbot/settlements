@@ -64,7 +64,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
       return
     }
     state(
-      FaeEntity.behaviorTree,
+      FaeBehaviorTree.map.getOrElse("root", ActionNode(FaeBehavior.unknown)),
       this.performBehavior
     )
   }
@@ -81,9 +81,6 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
         Failure
       case FaeBehavior.unimplemented =>
         println("Encountered unimplemented behavior, skipping.")
-        Success
-      case FaeBehavior.tree(key) =>
-        // TODO: return
         Success
       case FaeBehavior.is_tired =>
         if this.level().isNight then Success else Failure
@@ -194,5 +191,4 @@ object FaeEntity {
       .add(Attributes.MOVEMENT_SPEED, 0.2f)
       .add(Attributes.FOLLOW_RANGE, 20f)
 
-  private val behaviorTree: Node[FaeBehavior] = FaeBehaviorTree.map.getOrElse("root", ActionNode(FaeBehavior.unknown))
 }

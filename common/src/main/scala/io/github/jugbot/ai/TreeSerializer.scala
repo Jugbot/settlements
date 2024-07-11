@@ -26,10 +26,12 @@ import java.util
 import java.util.Arrays
 import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.jdk.CollectionConverters.MapHasAsJava
+import com.fasterxml.jackson.core.JsonGenerator.Feature
+import com.fasterxml.jackson.core.json.JsonWriteFeature
 
 type T = Any
 
-class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with ContextualDeserializer {
+class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
 
   private var genericType: JavaType = _
   private var genericDeserializer: JsonDeserializer[Object] = _
@@ -69,11 +71,6 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
     }
     val nodeType = p.currentName()
     val node = nodeType match {
-      case "action" =>
-        p.nextToken()
-        val action = genericDeserializer.deserialize(p, ctxt)
-        p.nextToken()
-        ActionNode[T](action)
       case "selector" =>
         p.nextToken()
         val children = deserializeSeqPart(p, ctxt)
@@ -82,12 +79,11 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
         p.nextToken()
         val children = deserializeSeqPart(p, ctxt)
         SequenceNode[T](children*)
-      case _ =>
-        throw ctxt.weirdKeyException(
-          classOf[Node[T]],
-          nodeType,
-          f"Unexpected key name $nodeType"
-        )
+      case action =>
+        p.nextToken()
+        val args = p.readValueAs(classOf[Map[String, String]])
+        p.nextToken()
+        ActionNode[T](action, args)
     }
     if p.currentToken() != JsonToken.END_OBJECT then {
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected END_OBJECT")
@@ -101,37 +97,18 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) with C
     ctxt: DeserializationContext
   ): Node[T] =
     deserializeObjPart(p, ctxt)
-
-  override def createContextual(
-    ctxt: DeserializationContext,
-    property: BeanProperty
-  ): JsonDeserializer[Node[T]] = {
-    val contextualType: JavaType = ctxt.getContextualType
-
-    val typeParameters: List[JavaType] =
-      List.from(contextualType.getBindings.getTypeParameters.asScala)
-    if typeParameters.size != 1 then {
-      throw new IllegalStateException("size should be 1")
-    }
-
-    val genericType: JavaType = typeParameters.head
-
-    val genericDeserializer: JsonDeserializer[Object] =
-      ctxt.findContextualValueDeserializer(genericType, property)
-    NodeDeserializer(genericType, genericDeserializer)
-  }
 }
 
-object NodeSerializer extends StdSerializer[Node[?]](classOf[Node[?]]) {
+object NodeSerializer extends StdSerializer[ParameterizedNode](classOf[ParameterizedNode]) {
   override def serialize(
-    value: Node[?],
+    value: ParameterizedNode,
     gen: JsonGenerator,
     provider: SerializerProvider
   ): Unit = {
     gen.writeStartObject()
     value match {
-      case ActionNode(action) =>
-        provider.defaultSerializeField("action", action, gen);
+      case ActionNode(action, params) =>
+        provider.defaultSerializeField(action, params, gen);
       case SelectorNode(children*) =>
         provider.defaultSerializeField("selector", children, gen);
       case SequenceNode(children*) =>
@@ -166,6 +143,7 @@ object BTMapper {
     .enable(JsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)
     .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS)
     .enable(JsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)
+    .disable(JsonWriteFeature.QUOTE_FIELD_NAMES)
     .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
     .build()
 }

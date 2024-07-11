@@ -18,7 +18,6 @@ enum BlackboardKey {
 enum FaeBehavior(args: BlackboardKey*) {
   case unknown
   case unimplemented
-  case tree(name: String)
   case sleep
   case is_tired
   case has(key: BlackboardKey) extends FaeBehavior(key)
