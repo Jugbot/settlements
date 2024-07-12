@@ -6,15 +6,15 @@ import org.scalatest.matchers.should.Matchers
 
 import scala.collection.mutable.ArrayBuffer
 
-object ExampleBehaviors {
-  val EAT = "EAT"
-  val SLEEP = "SLEEP"
-  val RAVE = "RAVE"
-  val REPEAT = "REPEAT"
+private object ExampleBehavior {
+  val EAT = "eat"
+  val SLEEP = "sleep"
+  val RAVE = "rave"
+  val REPEAT = "repeat"
 }
 
 val eating: ParameterizedNode = SequenceNode(
-  ActionNode(ExampleBehaviors.EAT,
+  ActionNode(ExampleBehavior.EAT,
              Map(
                "food" -> "$food"
              )
@@ -24,14 +24,14 @@ val eating: ParameterizedNode = SequenceNode(
 def perform(result: ArrayBuffer[String])(action: String, parameters: Map[String, String]): Status = {
   result += action
   action match {
-    case ExampleBehaviors.EAT if parameters.contains("food") =>
+    case ExampleBehavior.EAT if parameters.contains("food") =>
       result += parameters("food")
       Success
-    case ExampleBehaviors.REPEAT =>
+    case ExampleBehavior.REPEAT =>
       Success
-    case ExampleBehaviors.SLEEP =>
+    case ExampleBehavior.SLEEP =>
       Success
-    case ExampleBehaviors.RAVE =>
+    case ExampleBehavior.RAVE =>
       Success
     case unknown =>
       throw Exception(f"unknown action $unknown")
@@ -58,7 +58,7 @@ class BehaviorTreeModules extends AnyFunSuite with Matchers {
     )
 
     (result should contain).theSameElementsInOrderAs(
-      Seq(ExampleBehaviors.EAT, "bagel")
+      Seq(ExampleBehavior.EAT, "bagel")
     )
   }
 
@@ -86,7 +86,7 @@ class BehaviorTreeModules extends AnyFunSuite with Matchers {
     )
 
     (result should contain).theSameElementsInOrderAs(
-      Seq(ExampleBehaviors.EAT, "bagel", ExampleBehaviors.EAT, "pizza")
+      Seq(ExampleBehavior.EAT, "bagel", ExampleBehavior.EAT, "pizza")
     )
   }
 }

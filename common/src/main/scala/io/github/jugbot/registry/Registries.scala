@@ -24,7 +24,7 @@ object Registries {
   final private val BEHAVIORS = DeferredRegister.create(
     Mod.MOD_ID,
     net.minecraft.core.registries.Registries.ENTITY_TYPE
-  );
+  )
 
   final val FAE_ENTITY: RegistrySupplier[EntityType[FaeEntity]] =
     ENTITY_TYPES.register("fae", FaeEntity.TYPE)

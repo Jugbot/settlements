@@ -45,6 +45,27 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
     this.genericDeserializer = genericDeserializer
   }
 
+  private def deserializeStringPart(
+    p: JsonParser,
+    ctxt: DeserializationContext
+  ): Node[T] = {
+    val raw = p.getValueAsString()
+
+    val (behaviorType, args) = raw.split("""[(),]""").splitAt(1)
+
+    val argMap = args.map { s =>
+      val splitIndex = s.indexOf("=")
+      if splitIndex == -1 then
+        ctxt.reportBadDefinition(
+          classOf[String],
+          f"Expected 'behaviorName(argName=argValue)' form in behavior definition at ${p.currentLocation}"
+        )
+      (s.take(splitIndex), s.drop(splitIndex + 1))
+    }.toMap
+
+    ActionNode(behaviorType, argMap)
+  }
+
   private def deserializeSeqPart(
     p: JsonParser,
     ctxt: DeserializationContext
@@ -53,8 +74,10 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
       throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
     }
     p.nextToken()
-    var children = Seq[Node[Any]]()
-    while p.currentToken() != JsonToken.END_ARRAY do children :+= deserializeObjPart(p, ctxt)
+    var children = Seq[Node[T]]()
+    while p.currentToken() != JsonToken.END_ARRAY do
+      if p.currentToken() == JsonToken.START_OBJECT then children :+= deserializeObjPart(p, ctxt)
+      else children :+= deserializeStringPart(p, ctxt)
     p.nextToken()
     children
   }
@@ -105,16 +128,27 @@ object NodeSerializer extends StdSerializer[ParameterizedNode](classOf[Parameter
     gen: JsonGenerator,
     provider: SerializerProvider
   ): Unit = {
-    gen.writeStartObject()
+    def serializeSingleFieldObject(name: String, value: Object): Unit = {
+      gen.writeStartObject()
+      provider.defaultSerializeField(name, value, gen)
+      gen.writeEndObject()
+    }
+
+    def serializeActionShorthand(name: String, params: Map[String, String]): Unit = {
+      val strNamedArgs = params.map((key, value) => f"$key=$value").mkString(",")
+      val strFunction = f"$name($strNamedArgs)"
+      val shorthand = if strNamedArgs.nonEmpty then strFunction else name
+      provider.defaultSerializeValue(shorthand, gen)
+    }
+
     value match {
       case ActionNode(action, params) =>
-        provider.defaultSerializeField(action, params, gen);
+        serializeActionShorthand(action, params);
       case SelectorNode(children*) =>
-        provider.defaultSerializeField("selector", children, gen);
+        serializeSingleFieldObject("selector", children);
       case SequenceNode(children*) =>
-        provider.defaultSerializeField("sequence", children, gen);
+        serializeSingleFieldObject("sequence", children);
     }
-    gen.writeEndObject()
   }
 }
 

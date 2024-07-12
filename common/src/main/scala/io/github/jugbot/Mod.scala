@@ -8,12 +8,12 @@ import io.github.jugbot.registry.Registries
 import io.github.jugbot.render.FaeRenderer
 import net.fabricmc.api.EnvType
 import net.fabricmc.api.Environment
-import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.{LogManager, Logger}
 
 object Mod {
   final val MOD_ID = "settlements"
 
-  val LOGGER = LogManager.getLogger
+  val LOGGER: Logger = LogManager.getLogger
 
   def initialize(): Unit = {
     LOGGER.info("Hello World!")
