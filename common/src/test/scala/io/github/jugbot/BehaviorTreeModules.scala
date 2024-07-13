@@ -21,18 +21,18 @@ val eating: ParameterizedNode = SequenceNode(
   )
 )
 
-def perform(result: ArrayBuffer[String])(action: String, parameters: Map[String, String]): Status = {
+def perform(result: ArrayBuffer[String])(action: String, parameters: Map[String, String]): BehaviorStatus = {
   result += action
   action match {
     case ExampleBehavior.EAT if parameters.contains("food") =>
       result += parameters("food")
-      Success
+      BehaviorSuccess
     case ExampleBehavior.REPEAT =>
-      Success
+      BehaviorSuccess
     case ExampleBehavior.SLEEP =>
-      Success
+      BehaviorSuccess
     case ExampleBehavior.RAVE =>
-      Success
+      BehaviorSuccess
     case unknown =>
       throw Exception(f"unknown action $unknown")
   }

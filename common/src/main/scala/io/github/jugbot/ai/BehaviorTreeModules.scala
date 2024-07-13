@@ -15,7 +15,7 @@ def runModules(root: ParameterizedNode,
                perform: Perform[ParameterizedAction],
                references: References = Map.empty
 ): Unit = {
-  def cb(name: String, parameters: Parameters, context: Parameters): Status = {
+  def cb(name: String, parameters: Parameters, context: Parameters): BehaviorStatus = {
     val hydratedParams = parameters.map((key, value) => (key, context.getOrElse(value, value)))
     references.get(name) match {
       case Some(n) => run(n, cb(_, _, hydratedParams))
