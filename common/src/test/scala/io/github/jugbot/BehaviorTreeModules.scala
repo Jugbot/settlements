@@ -5,16 +5,25 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Try
 
-private object ExampleBehavior {
-  val EAT = "eat"
-  val SLEEP = "sleep"
-  val RAVE = "rave"
-  val REPEAT = "repeat"
+private enum ExampleBehavior {
+  case UNKNOWN
+  case EAT
+  case SLEEP
+  case RAVE
+  case REPEAT
+}
+
+object ExampleBehavior {
+  def valueOf(s: String, default: ExampleBehavior): ExampleBehavior = Try(ExampleBehavior.valueOf(s)) match {
+    case scala.util.Failure(exception) => default
+    case scala.util.Success(value)     => value
+  }
 }
 
 val eating: ParameterizedNode = SequenceNode(
-  ActionNode(ExampleBehavior.EAT,
+  ActionNode(ExampleBehavior.EAT.toString,
              Map(
                "food" -> "$food"
              )
@@ -23,7 +32,7 @@ val eating: ParameterizedNode = SequenceNode(
 
 def perform(result: ArrayBuffer[String])(action: String, parameters: Map[String, String]): BehaviorStatus = {
   result += action
-  action match {
+  ExampleBehavior.valueOf(action, ExampleBehavior.UNKNOWN) match {
     case ExampleBehavior.EAT if parameters.contains("food") =>
       result += parameters("food")
       BehaviorSuccess
@@ -33,8 +42,8 @@ def perform(result: ArrayBuffer[String])(action: String, parameters: Map[String,
       BehaviorSuccess
     case ExampleBehavior.RAVE =>
       BehaviorSuccess
-    case unknown =>
-      throw Exception(f"unknown action $unknown")
+    case _ =>
+      throw Exception(f"unknown action $action")
   }
 }
 
@@ -58,7 +67,7 @@ class BehaviorTreeModules extends AnyFunSuite with Matchers {
     )
 
     (result should contain).theSameElementsInOrderAs(
-      Seq(ExampleBehavior.EAT, "bagel")
+      Seq(ExampleBehavior.EAT.toString, "bagel")
     )
   }
 
@@ -86,7 +95,7 @@ class BehaviorTreeModules extends AnyFunSuite with Matchers {
     )
 
     (result should contain).theSameElementsInOrderAs(
-      Seq(ExampleBehavior.EAT, "bagel", ExampleBehavior.EAT, "pizza")
+      Seq(ExampleBehavior.EAT.toString, "bagel", ExampleBehavior.EAT.toString, "pizza")
     )
   }
 }
