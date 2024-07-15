@@ -41,6 +41,7 @@ import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation
 import io.github.jugbot.ai.tree.BlackboardKey
 import io.github.jugbot.ai.tree.FaeBehavior
+import io.github.jugbot.ai.runModules
 
 class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(entityType, world) {
 
@@ -63,21 +64,28 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
     if this.level().isClientSide then {
       return
     }
-    state(
-      FaeBehaviorTree.map.getOrElse("root", ActionNode(FaeBehavior.unknown())),
-      this.performBehavior
+    runModules(
+      FaeBehaviorTree.map.getOrElse("root", FaeBehaviorTree.fallback),
+      this.performBehavior,
+      FaeBehaviorTree.map
     )
   }
 
-  private def getBlackboard(key: BlackboardKey): Option[Any] =
+  private def getBlackboard(key: String): Option[Any] =
     key match {
       case BlackboardKey.bed_position => this.bedPosition
+      // TODO: This might be the wrong signal to give when a key name is unexpected
+      case _ => None
     }
 
-  private def performBehavior(behavior: FaeBehavior): BehaviorStatus =
-    behavior match {
+  private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
+    val maybeBehavior = FaeBehavior.valueOf(name, args)
+    if maybeBehavior.isEmpty then
+      println(s"Encountered unknown behavior: $name with $args")
+      return BehaviorFailure
+    maybeBehavior.get match {
       case FaeBehavior.unknown() =>
-        println("Encountered a behavior without an implementation!")
+        println("Encountered an unknown behavior. There is likely a problem with your config.")
         BehaviorFailure
       case FaeBehavior.unimplemented() =>
         println("Encountered unimplemented behavior, skipping.")
