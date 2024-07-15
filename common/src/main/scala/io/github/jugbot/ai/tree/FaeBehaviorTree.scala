@@ -38,27 +38,20 @@ object FaeBehavior {
 
 object FaeBehaviorTree {
   private var behaviorTreeMap: Map[String, ParameterizedNode] = Map()
-  val map: Map[String, ParameterizedNode] = behaviorTreeMap
+  def map: Map[String, ParameterizedNode] = behaviorTreeMap
   val fallback: ParameterizedNode = ActionNode("unknown", Map.empty)
 
   private val extension_regex = """^.*\.json5?$""".r
 
   object Loader extends SimplePreparableReloadListener[Map[String, ParameterizedNode]] {
-    private def deserializeJson(reader: Reader): ParameterizedNode = {
-      val javaType: JavaType =
-        BTMapper.mapper.getTypeFactory.constructType(classOf[FaeBehavior])
-
-      val typeRef = BTMapper.mapper.getTypeFactory
-        .constructSimpleType(classOf[Node[?]], Array(javaType))
-
-      Try[ParameterizedNode](BTMapper.mapper.readValue(reader, typeRef)) match {
+    private def deserializeJson(reader: Reader): ParameterizedNode =
+      Try[ParameterizedNode](BTMapper.mapper.readValue(reader, classOf[ParameterizedNode])) match {
         case Success(value) => value
         case Failure(exception) =>
           LOGGER.warn("Unable to parse custom behavior.")
           LOGGER.warn(exception)
           fallback
       }
-    }
 
     override def prepare(resourceManager: ResourceManager,
                          profilerFiller: ProfilerFiller

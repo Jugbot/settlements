@@ -50,8 +50,9 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
     ctxt: DeserializationContext
   ): Node[T] = {
     val raw = p.getValueAsString()
+    p.nextToken()
 
-    val (behaviorType, args) = raw.split("""[(),]""").splitAt(1)
+    val (Array(behaviorType), args) = raw.split("""[(),]""").splitAt(1)
 
     val argMap = args.map { s =>
       val splitIndex = s.indexOf("=")
