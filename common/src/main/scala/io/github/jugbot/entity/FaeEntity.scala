@@ -64,7 +64,7 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
       return
     }
     state(
-      FaeBehaviorTree.map.getOrElse("root", ActionNode(FaeBehavior.unknown)),
+      FaeBehaviorTree.map.getOrElse("root", ActionNode(FaeBehavior.unknown())),
       this.performBehavior
     )
   }
@@ -76,28 +76,28 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
 
   private def performBehavior(behavior: FaeBehavior): BehaviorStatus =
     behavior match {
-      case FaeBehavior.unknown =>
+      case FaeBehavior.unknown() =>
         println("Encountered a behavior without an implementation!")
         BehaviorFailure
-      case FaeBehavior.unimplemented =>
+      case FaeBehavior.unimplemented() =>
         println("Encountered unimplemented behavior, skipping.")
         BehaviorSuccess
-      case FaeBehavior.is_tired =>
+      case FaeBehavior.is_tired() =>
         if this.level().isNight then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.has(key) =>
         getBlackboard(key) match {
           case Some(_) => BehaviorSuccess
           case _       => BehaviorFailure
         }
-      case FaeBehavior.sleep =>
+      case FaeBehavior.sleep() =>
         if this.bedPosition.isDefined then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.bed_is_valid =>
+      case FaeBehavior.bed_is_valid() =>
         val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(bedPosition.get)
         if blockState.is(BlockTags.BEDS) && blockState
             .getValue(BedBlock.OCCUPIED) == false
         then BehaviorSuccess
         else BehaviorFailure
-      case FaeBehavior.claim_bed =>
+      case FaeBehavior.claim_bed() =>
         val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager
         // TODO: instead of finding beds within a distance we should keep record of all beds within the kingdom
         val takenPOI = poiManager.take(holder => holder.is(PoiTypes.HOME), (_, _) => true, this.blockPosition, 32)
@@ -129,9 +129,9 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
             if this.getNavigation.moveTo(path, 1) then BehaviorSuccess else BehaviorFailure
           case _ => BehaviorFailure
         }
-      case FaeBehavior.current_path_unobstructed =>
+      case FaeBehavior.current_path_unobstructed() =>
         if this.getNavigation.isStuck then BehaviorFailure else BehaviorSuccess
-      case FaeBehavior.move_along_current_path =>
+      case FaeBehavior.move_along_current_path() =>
         this.getNavigation.tick()
         BehaviorSuccess
     }

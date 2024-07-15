@@ -15,37 +15,24 @@ enum BlackboardKey {
   case bed_position
 }
 
-enum FaeBehavior(args: BlackboardKey*) {
-  case unknown
-  case unimplemented
-  case sleep
-  case is_tired
-  case has(key: BlackboardKey) extends FaeBehavior(key)
-  case claim_bed
-  case bed_is_valid
-  case is_at_location(destinationKey: BlackboardKey) extends FaeBehavior(destinationKey)
-  case has_nav_path_to(destinationKey: BlackboardKey) extends FaeBehavior(destinationKey)
-  case create_nav_path_to(destinationKey: BlackboardKey) extends FaeBehavior(destinationKey)
-  case current_path_unobstructed
-  case move_along_current_path
-}
+sealed trait FaeBehavior
 
 object FaeBehavior {
-  def valueOf(jsonValue: String): FaeBehavior = {
-    val tokens = jsonValue.split("""[(),]""").toList
+  case class unknown() extends FaeBehavior
+  case class unimplemented() extends FaeBehavior
+  case class sleep() extends FaeBehavior
+  case class is_tired() extends FaeBehavior
+  case class has(value: BlackboardKey) extends FaeBehavior
+  case class claim_bed() extends FaeBehavior
+  case class bed_is_valid() extends FaeBehavior
+  case class is_at_location(blockPos: BlackboardKey) extends FaeBehavior
+  case class has_nav_path_to(blockPos: BlackboardKey) extends FaeBehavior
+  case class create_nav_path_to(blockPos: BlackboardKey) extends FaeBehavior
+  case class current_path_unobstructed() extends FaeBehavior
+  case class move_along_current_path() extends FaeBehavior
 
-    // TODO: This could probably be done automatically using reflection or macros
-    tokens match {
-      case behaviorType :: args =>
-        val keys = args.map(BlackboardKey.valueOf)
-        behaviorType match {
-          case "unimplemented"           => FaeBehavior.unimplemented
-          case "has" if keys.length >= 1 => FaeBehavior.has(keys(0))
-          case _                         => FaeBehavior.unknown
-        }
-      case _ => FaeBehavior.unknown
-    }
-  }
+  def valueOf(name: String, args: Map[String, BlackboardKey]): Option[FaeBehavior] =
+    io.github.jugbot.meta.valueOf[FaeBehavior](name, args)
 }
 
 object FaeBehaviorTree {
@@ -67,7 +54,7 @@ object FaeBehaviorTree {
         case Failure(exception) =>
           LOGGER.warn("Unable to parse custom behavior.")
           LOGGER.warn(exception)
-          ActionNode(FaeBehavior.unknown)
+          ActionNode(FaeBehavior.unknown())
       }
     }
 
