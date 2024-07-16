@@ -11,6 +11,11 @@ import java.nio.file.Path
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
 import io.github.jugbot.ai.ParameterizedNode
+import io.github.jugbot.ai.SelectorNode
+import io.github.jugbot.ai.SequenceNode
+import scala.collection.mutable.Set as MutableSet
+import scala.collection.mutable.Seq as MutableSeq
+import io.github.jugbot.ai.isValidTree
 
 object BlackboardKey {
   val bed_position = "bed_position"
@@ -72,6 +77,7 @@ object FaeBehaviorTree {
                        resourceManager: ResourceManager,
                        profilerFiller: ProfilerFiller
     ): Unit =
+      assert(isValidTree(map, FaeBehavior.valueOf), "Could not validate behavior configs!")
       FaeBehaviorTree.behaviorTreeMap = map
   }
 }
