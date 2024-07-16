@@ -53,7 +53,7 @@ class BehaviorTreeModules extends AnyFunSuite with Matchers {
     val root: ParameterizedNode = SequenceNode(
       ActionNode("eating",
                  Map(
-                   "$food" -> "bagel"
+                   "food" -> "bagel"
                  )
       )
     )
@@ -76,12 +76,12 @@ class BehaviorTreeModules extends AnyFunSuite with Matchers {
     val root: ParameterizedNode = SequenceNode(
       ActionNode("eating",
                  Map(
-                   "$food" -> "bagel"
+                   "food" -> "bagel"
                  )
       ),
       ActionNode("eating",
                  Map(
-                   "$food" -> "pizza"
+                   "food" -> "pizza"
                  )
       )
     )
