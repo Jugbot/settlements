@@ -30,13 +30,10 @@ class BehaviorTree extends AnyFunSuite with Matchers {
       (behavior: ExampleBehaviors) =>
         behavior match {
           case ExampleBehaviors.EAT =>
-            print("EAT")
             BehaviorSuccess
           case ExampleBehaviors.RE_EAT =>
-            print("RE_EAT")
             BehaviorSuccess
           case _ =>
-            print("OTHER")
             BehaviorFailure
         }
     )

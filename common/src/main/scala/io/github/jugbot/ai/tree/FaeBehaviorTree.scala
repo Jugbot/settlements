@@ -24,8 +24,13 @@ object BlackboardKey {
 sealed trait FaeBehavior
 
 object FaeBehavior {
+
+  /** A default value for when a FaeBehavior cannot be properly resolved */
   case class unknown() extends FaeBehavior
+
+  /** A placeholder behavior that always is successful */
   case class unimplemented() extends FaeBehavior
+
   case class sleep() extends FaeBehavior
   case class is_tired() extends FaeBehavior
   case class has(value: String) extends FaeBehavior

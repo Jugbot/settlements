@@ -81,14 +81,13 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
   private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
     val maybeBehavior = FaeBehavior.valueOf(name, args)
     if maybeBehavior.isEmpty then
-      println(s"Encountered unknown behavior: $name with $args")
+      throw new Exception(s"Encountered unknown behavior: $name with $args")
       return BehaviorFailure
     maybeBehavior.get match {
       case FaeBehavior.unknown() =>
-        println("Encountered an unknown behavior. There is likely a problem with your config.")
+        throw new Exception("Encountered an unknown behavior. There is likely a problem with your config.")
         BehaviorFailure
       case FaeBehavior.unimplemented() =>
-        println("Encountered unimplemented behavior, skipping.")
         BehaviorSuccess
       case FaeBehavior.is_tired() =>
         if this.level().isNight then BehaviorSuccess else BehaviorFailure
