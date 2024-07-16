@@ -1,0 +1,14 @@
+{
+  sequence: [
+    "is_tired",
+    {
+      selector: [
+        {
+          sequence: ["has(value=bed_position)", "bed_is_valid"],
+        },
+        "claim_bed",
+      ],
+    },
+    "go_to_block(blockPos=bed_position)",
+  ],
+}

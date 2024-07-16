@@ -17,13 +17,13 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation
 import java.lang
 import java.util.function.Supplier
 import java.util as ju
-import io.github.jugbot.ai.state
+import io.github.jugbot.ai.run as state
 import io.github.jugbot.ai.Node
 import io.github.jugbot.ai.ActionNode
-import io.github.jugbot.ai.Failure
-import io.github.jugbot.ai.Success
+import io.github.jugbot.ai.BehaviorFailure
+import io.github.jugbot.ai.BehaviorSuccess
 import io.github.jugbot.ai.tree.FaeBehavior
-import io.github.jugbot.ai.Status
+import io.github.jugbot.ai.BehaviorStatus
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.NbtUtils
@@ -41,6 +41,7 @@ import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation
 import io.github.jugbot.ai.tree.BlackboardKey
 import io.github.jugbot.ai.tree.FaeBehavior
+import io.github.jugbot.ai.runModules
 
 class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(entityType, world) {
 
@@ -63,58 +64,61 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
     if this.level().isClientSide then {
       return
     }
-    state(
-      FaeEntity.behaviorTree,
-      this.performBehavior
+    runModules(
+      FaeBehaviorTree.map.getOrElse("root", FaeBehaviorTree.fallback),
+      this.performBehavior,
+      FaeBehaviorTree.map
     )
   }
 
-  private def getBlackboard(key: BlackboardKey): Option[Any] =
+  private def getBlackboard(key: String): Option[Any] =
     key match {
       case BlackboardKey.bed_position => this.bedPosition
+      // TODO: This might be the wrong signal to give when a key name is unexpected
+      case _ => None
     }
 
-  private def performBehavior(behavior: FaeBehavior): Status =
-    behavior match {
-      case FaeBehavior.unknown =>
-        println("Encountered a behavior without an implementation!")
-        Failure
-      case FaeBehavior.unimplemented =>
-        println("Encountered unimplemented behavior, skipping.")
-        Success
-      case FaeBehavior.tree(key) =>
-        // TODO: return
-        Success
-      case FaeBehavior.is_tired =>
-        if this.level().isNight then Success else Failure
+  private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
+    val maybeBehavior = FaeBehavior.valueOf(name, args)
+    if maybeBehavior.isEmpty then
+      throw new Exception(s"Encountered unknown behavior: $name with $args")
+      return BehaviorFailure
+    maybeBehavior.get match {
+      case FaeBehavior.unknown() =>
+        throw new Exception("Encountered an unknown behavior. There is likely a problem with your config.")
+        BehaviorFailure
+      case FaeBehavior.unimplemented() =>
+        BehaviorSuccess
+      case FaeBehavior.is_tired() =>
+        if this.level().isNight then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.has(key) =>
         getBlackboard(key) match {
-          case Some(_) => Success
-          case _       => Failure
+          case Some(_) => BehaviorSuccess
+          case _       => BehaviorFailure
         }
-      case FaeBehavior.sleep =>
-        if this.bedPosition.isDefined then Success else Failure
-      case FaeBehavior.bed_is_valid =>
+      case FaeBehavior.sleep() =>
+        if this.bedPosition.isDefined then BehaviorSuccess else BehaviorFailure
+      case FaeBehavior.bed_is_valid() =>
         val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(bedPosition.get)
         if blockState.is(BlockTags.BEDS) && blockState
             .getValue(BedBlock.OCCUPIED) == false
-        then Success
-        else Failure
-      case FaeBehavior.claim_bed =>
+        then BehaviorSuccess
+        else BehaviorFailure
+      case FaeBehavior.claim_bed() =>
         val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager
         // TODO: instead of finding beds within a distance we should keep record of all beds within the kingdom
         val takenPOI = poiManager.take(holder => holder.is(PoiTypes.HOME), (_, _) => true, this.blockPosition, 32)
         bedPosition = if takenPOI.isPresent then Some(takenPOI.get) else None
         bedPosition match {
-          case Some(value) => Success
-          case None        => Failure
+          case Some(value) => BehaviorSuccess
+          case None        => BehaviorFailure
         }
       case FaeBehavior.is_at_location(key) =>
         getBlackboard(key) match {
           case Some(blockPos: BlockPos)
               if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.14) =>
-            Success
-          case _ => Failure
+            BehaviorSuccess
+          case _ => BehaviorFailure
         }
       case FaeBehavior.has_nav_path_to(key) =>
         getBlackboard(key) match {
@@ -122,21 +126,21 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
               if this.getNavigation.getTargetPos != null && blockPos.distManhattan(
                 this.getNavigation.getTargetPos
               ) <= 1 && this.getNavigation.isInProgress =>
-            Success
-          case _ => Failure
+            BehaviorSuccess
+          case _ => BehaviorFailure
         }
       case FaeBehavior.create_nav_path_to(key) =>
         getBlackboard(key) match {
           case Some(blockPos: BlockPos) =>
             val path = this.getNavigation.createPath(blockPos, 1)
-            if this.getNavigation.moveTo(path, 1) then Success else Failure
-          case _ => Failure
+            if this.getNavigation.moveTo(path, 1) then BehaviorSuccess else BehaviorFailure
+          case _ => BehaviorFailure
         }
-      case FaeBehavior.current_path_unobstructed =>
-        if this.getNavigation.isStuck then Failure else Success
-      case FaeBehavior.move_along_current_path =>
+      case FaeBehavior.current_path_unobstructed() =>
+        if this.getNavigation.isStuck then BehaviorFailure else BehaviorSuccess
+      case FaeBehavior.move_along_current_path() =>
         this.getNavigation.tick()
-        Success
+        BehaviorSuccess
     }
 
   override def die(damageSource: DamageSource): Unit = {
@@ -194,5 +198,4 @@ object FaeEntity {
       .add(Attributes.MOVEMENT_SPEED, 0.2f)
       .add(Attributes.FOLLOW_RANGE, 20f)
 
-  private val behaviorTree: Node[FaeBehavior] = FaeBehaviorTree.map.getOrElse("root", ActionNode(FaeBehavior.unknown))
 }
