@@ -1,7 +1,7 @@
 package io.github.jugbot.entity
 
 import com.google.common.base.Suppliers
-import io.github.jugbot.ai.{runModules, BehaviorFailure, BehaviorStatus, BehaviorSuccess}
+import io.github.jugbot.ai.{runModules, BehaviorFailure, BehaviorRunning, BehaviorStatus, BehaviorSuccess}
 import io.github.jugbot.ai.tree.{BlackboardKey, FaeBehavior, FaeBehaviorTree}
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.{CompoundTag, NbtUtils}
@@ -120,8 +120,11 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
       case FaeBehavior.current_path_unobstructed() =>
         if this.getNavigation.isStuck then BehaviorFailure else BehaviorSuccess
       case FaeBehavior.move_along_current_path() =>
-        this.getNavigation.tick()
-        BehaviorSuccess
+        val nav = this.getNavigation
+        if nav.isInProgress then
+          nav.tick()
+          BehaviorRunning
+        else BehaviorSuccess
     }
 
   override def die(damageSource: DamageSource): Unit = {

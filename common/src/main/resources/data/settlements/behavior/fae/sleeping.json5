@@ -10,5 +10,6 @@
       ],
     },
     "go_to_block(blockPos=bed_position)",
+    "sleep"
   ],
 }
