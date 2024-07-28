@@ -1,47 +1,25 @@
 package io.github.jugbot.entity
 
 import com.google.common.base.Suppliers
-import net.minecraft.world.entity.Entity
-import net.minecraft.world.entity.EntityType
-import net.minecraft.world.entity.EquipmentSlot
-import net.minecraft.world.entity.HumanoidArm
-import net.minecraft.world.entity.LivingEntity
-import net.minecraft.world.entity.Mob
-import net.minecraft.world.entity.MobCategory
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier
-import net.minecraft.world.entity.ai.attributes.Attributes
+import io.github.jugbot.ai.{runModules, BehaviorFailure, BehaviorStatus, BehaviorSuccess}
+import io.github.jugbot.ai.tree.{BlackboardKey, FaeBehavior, FaeBehaviorTree}
+import net.minecraft.core.BlockPos
+import net.minecraft.nbt.{CompoundTag, NbtUtils}
+import net.minecraft.network.protocol.game.DebugPackets
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.tags.BlockTags
+import net.minecraft.world.damagesource.DamageSource
+import net.minecraft.world.entity.*
+import net.minecraft.world.entity.ai.attributes.{AttributeSupplier, Attributes}
+import net.minecraft.world.entity.ai.village.poi.{PoiManager, PoiTypes}
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
-import net.minecraft.world.entity.ai.navigation.PathNavigation
-
-import java.lang
-import java.util.function.Supplier
-import java.util as ju
-import io.github.jugbot.ai.run as state
-import io.github.jugbot.ai.Node
-import io.github.jugbot.ai.ActionNode
-import io.github.jugbot.ai.BehaviorFailure
-import io.github.jugbot.ai.BehaviorSuccess
-import io.github.jugbot.ai.tree.FaeBehavior
-import io.github.jugbot.ai.BehaviorStatus
-import net.minecraft.nbt.CompoundTag
-import net.minecraft.core.BlockPos
-import net.minecraft.nbt.NbtUtils
-import io.github.jugbot.ai.tree.FaeBehaviorTree
-import net.minecraft.server.level.ServerLevel
-import net.minecraft.world.entity.ai.village.poi.PoiTypes
-import net.minecraft.world.entity.ai.village.poi.PoiManager
-import net.minecraft.world.level.block.state.BlockState
-import net.minecraft.tags.BlockTags
 import net.minecraft.world.level.block.BedBlock
-import net.minecraft.world.damagesource.DamageSource
+import net.minecraft.world.level.block.state.BlockState
 
+import java.util as ju
 import java.util.Optional
-import net.minecraft.network.protocol.game.DebugPackets
-import net.minecraft.world.entity.ai.navigation.GroundPathNavigation
-import io.github.jugbot.ai.tree.BlackboardKey
-import io.github.jugbot.ai.tree.FaeBehavior
-import io.github.jugbot.ai.runModules
+import java.util.function.Supplier
 
 class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(entityType, world) {
 
@@ -97,7 +75,10 @@ class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(enti
           case _       => BehaviorFailure
         }
       case FaeBehavior.sleep() =>
-        if this.bedPosition.isDefined then BehaviorSuccess else BehaviorFailure
+        if this.bedPosition.isDefined then
+          this.startSleeping(this.bedPosition.get)
+          BehaviorSuccess
+        else BehaviorFailure
       case FaeBehavior.bed_is_valid() =>
         val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(bedPosition.get)
         if blockState.is(BlockTags.BEDS) && blockState
@@ -187,7 +168,7 @@ object FaeEntity {
   final val TYPE: Supplier[EntityType[FaeEntity]] = Suppliers.memoize(() =>
     EntityType.Builder
       .of[FaeEntity](new FaeEntity(_, _), MobCategory.MISC)
-      .sized(0.98f, 0.7f)
+      .sized(0.6f, 1.8f)
       .build("fae_entity")
   )
 
@@ -195,7 +176,7 @@ object FaeEntity {
     LivingEntity
       .createLivingAttributes()
       .add(Attributes.MAX_HEALTH, 10.0)
-      .add(Attributes.MOVEMENT_SPEED, 0.2f)
+      .add(Attributes.MOVEMENT_SPEED, 1.0f)
       .add(Attributes.FOLLOW_RANGE, 20f)
 
 }
