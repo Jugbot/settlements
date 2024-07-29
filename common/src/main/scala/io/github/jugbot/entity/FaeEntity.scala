@@ -21,7 +21,7 @@ import java.util as ju
 import java.util.Optional
 import java.util.function.Supplier
 
-class FaeEntity(entityType: EntityType[? <: Mob], world: Level) extends Mob(entityType, world) {
+class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(entityType, world) {
 
   override def getArmorSlots: java.lang.Iterable[ItemStack] = ju.List.of()
 
