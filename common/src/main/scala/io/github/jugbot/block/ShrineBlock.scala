@@ -1,13 +1,21 @@
 package io.github.jugbot.block
 
 import io.github.jugbot.blockentity.ShrineBlockEntity
+import io.github.jugbot.screen.ShrineScreen
+import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket
+import net.minecraft.server.level.ServerPlayer
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties
-import net.minecraft.world.level.block.state.{BlockBehaviour, BlockState}
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
+import net.minecraft.world.level.block.state.{BlockBehaviour, BlockState}
 import net.minecraft.world.level.block.{BaseEntityBlock, RenderShape, SoundType}
 import net.minecraft.world.level.material.MapColor
+import net.minecraft.world.phys.BlockHitResult
+import net.minecraft.world.{InteractionHand, InteractionResult}
 
 class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
 
@@ -15,6 +23,29 @@ class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
     new ShrineBlockEntity(blockPos, blockState)
 
   override def getRenderShape(blockState: BlockState): RenderShape = RenderShape.MODEL
+
+  override def use(blockState: BlockState,
+                   level: Level,
+                   blockPos: BlockPos,
+                   player: Player,
+                   interactionHand: InteractionHand,
+                   blockHitResult: BlockHitResult
+  ): InteractionResult =
+    val blockEntity: BlockEntity = level.getBlockEntity(blockPos)
+    blockEntity match
+      case entity: ShrineBlockEntity if player.canUseGameMasterBlocks =>
+        handlePlayerOpenMenu(player, entity)
+        InteractionResult.sidedSuccess(level.isClientSide)
+      case _ => InteractionResult.PASS
+
+  private def handlePlayerOpenMenu(player: Player, blockEntity: ShrineBlockEntity): Unit = {
+    if (player.isLocalPlayer) {
+      Minecraft.getInstance().setScreen(new ShrineScreen(blockEntity))
+//      player.asInstanceOf[LocalPlayer].minecraft.setScreen(new ShrineScreen(blockEntity))
+    } else {
+      player.asInstanceOf[ServerPlayer].connection.send(ClientboundBlockEntityDataPacket.create(blockEntity, (b: BlockEntity) => b.saveWithoutMetadata))
+    }
+  }
 }
 
 object ShrineBlock {
