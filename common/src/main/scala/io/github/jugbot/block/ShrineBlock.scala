@@ -1,24 +1,28 @@
 package io.github.jugbot.block
 
-import net.minecraft.world.level.block.Block
-import net.minecraft.world.level.block.LiquidBlock
-import net.minecraft.world.level.block.state.BlockBehaviour.Properties
-import net.minecraft.world.level.block.state.properties.BlockStateProperties
-import net.minecraft.world.level.block.BaseEntityBlock
-import net.minecraft.world.level.block.entity.BlockEntity
-import net.minecraft.core.BlockPos
-import net.minecraft.world.level.block.state.BlockState
 import io.github.jugbot.blockentity.ShrineBlockEntity
-import java.util.function.Supplier
-import net.minecraft.world.level.block.state.BlockBehaviour
-import net.minecraft.world.level.block.Blocks
+import net.minecraft.core.BlockPos
+import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties
+import net.minecraft.world.level.block.state.{BlockBehaviour, BlockState}
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
+import net.minecraft.world.level.block.{BaseEntityBlock, RenderShape, SoundType}
+import net.minecraft.world.level.material.MapColor
 
 class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
 
   override def newBlockEntity(blockPos: BlockPos, blockState: BlockState): BlockEntity =
     new ShrineBlockEntity(blockPos, blockState)
+
+  override def getRenderShape(blockState: BlockState): RenderShape = RenderShape.MODEL
 }
 
 object ShrineBlock {
-  val INSTANCE = new ShrineBlock(BlockBehaviour.Properties.copy(Blocks.STONE))
+  val INSTANCE = new ShrineBlock(
+    BlockBehaviour.Properties.of
+      .mapColor(MapColor.WOOD)
+      .instrument(NoteBlockInstrument.BASS)
+      .strength(2.5f)
+      .sound(SoundType.WOOD)
+  )
 }
