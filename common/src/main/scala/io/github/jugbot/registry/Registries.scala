@@ -14,23 +14,54 @@ import net.minecraft.server.packs.PackType
 import net.minecraft.server.packs.resources.{ResourceManager, SimplePreparableReloadListener}
 import net.minecraft.util.profiling.ProfilerFiller
 import net.minecraft.world.entity.EntityType
+import io.github.jugbot.blockentity.ShrineBlockEntity
+import net.minecraft.world.level.block.entity.BlockEntityType
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.item.Item
+import net.minecraft.core.registries.Registries as MojRegistries
+import io.github.jugbot.block.ShrineBlock
+import net.minecraft.world.level.block.state.BlockBehaviour
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.item.BlockItem
+import net.minecraft.world.item.Item.Properties
 
 object Registries {
-  final private val ENTITY_TYPES: DeferredRegister[EntityType[?]] =
+  final private val BLOCKS =
     DeferredRegister.create(
       Mod.MOD_ID,
-      net.minecraft.core.registries.Registries.ENTITY_TYPE
+      MojRegistries.BLOCK
     );
-  final private val BEHAVIORS = DeferredRegister.create(
+  final private val ITEMS =
+    DeferredRegister.create(
+      Mod.MOD_ID,
+      MojRegistries.ITEM
+    );
+  final private val ENTITY_TYPES =
+    DeferredRegister.create(
+      Mod.MOD_ID,
+      MojRegistries.ENTITY_TYPE
+    );
+  final private val BLOCK_ENTITY_TYPES = DeferredRegister.create(
     Mod.MOD_ID,
-    net.minecraft.core.registries.Registries.ENTITY_TYPE
+    MojRegistries.BLOCK_ENTITY_TYPE
   )
 
   final val FAE_ENTITY: RegistrySupplier[EntityType[FaeEntity]] =
     ENTITY_TYPES.register("fae", FaeEntity.TYPE)
 
+  final val SHRINE_BLOCK: RegistrySupplier[Block] = BLOCKS.register("shrine", () => ShrineBlock.INSTANCE)
+
+  final val SHRINE_BLOCK_ITEM: RegistrySupplier[Item] =
+    ITEMS.register("shrine", () => new BlockItem(ShrineBlock.INSTANCE, Item.Properties()))
+
+  final val SHRINE_BLOCK_ENTITY: RegistrySupplier[BlockEntityType[ShrineBlockEntity]] =
+    BLOCK_ENTITY_TYPES.register("shrine", ShrineBlockEntity.TYPE)
+
   def initialize(): Unit = {
+    ITEMS.register()
+    BLOCKS.register()
     ENTITY_TYPES.register()
+    BLOCK_ENTITY_TYPES.register()
     EntityAttributeRegistry.register(
       FAE_ENTITY,
       () => FaeEntity.createAttributes()
