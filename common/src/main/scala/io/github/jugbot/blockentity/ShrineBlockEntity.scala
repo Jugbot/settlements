@@ -40,9 +40,8 @@ case class BlockStateRequirement(val state: TagKey[Block] | Block | BlockState,
 
   def isFullySatisfied: Boolean = total == satisfied
 
-  def toRenderableString: String = {
+  def toRenderableString: String =
     s"${state.toString} ($satisfied/$total)"
-  }
 }
 
 // TODO: Convert to datapack config
