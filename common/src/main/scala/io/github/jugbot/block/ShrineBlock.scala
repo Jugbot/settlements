@@ -8,7 +8,8 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.BaseEntityBlock.createTickerHelper
+import net.minecraft.world.level.block.entity.{BlockEntity, BlockEntityTicker, BlockEntityType}
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
 import net.minecraft.world.level.block.state.{BlockBehaviour, BlockState}
@@ -38,14 +39,24 @@ class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
         InteractionResult.sidedSuccess(level.isClientSide)
       case _ => InteractionResult.PASS
 
-  private def handlePlayerOpenMenu(player: Player, blockEntity: ShrineBlockEntity): Unit = {
-    if (player.isLocalPlayer) {
+  private def handlePlayerOpenMenu(player: Player, blockEntity: ShrineBlockEntity): Unit =
+    if player.isLocalPlayer then {
       Minecraft.getInstance().setScreen(new ShrineScreen(blockEntity))
-//      player.asInstanceOf[LocalPlayer].minecraft.setScreen(new ShrineScreen(blockEntity))
     } else {
-      player.asInstanceOf[ServerPlayer].connection.send(ClientboundBlockEntityDataPacket.create(blockEntity, (b: BlockEntity) => b.saveWithoutMetadata))
+      player
+        .asInstanceOf[ServerPlayer]
+        .connection
+        .send(ClientboundBlockEntityDataPacket.create(blockEntity, (b: BlockEntity) => b.saveWithoutMetadata))
     }
-  }
+
+  override def getTicker[T <: BlockEntity](level: Level,
+                                           blockState: BlockState,
+                                           blockEntityType: BlockEntityType[T]
+  ): BlockEntityTicker[T] =
+    createTickerHelper(blockEntityType,
+                       ShrineBlockEntity.TYPE.get(),
+                       (world1, pos, state1, be) => ShrineBlockEntity.tick(world1, pos, state1, be)
+    )
 }
 
 object ShrineBlock {
