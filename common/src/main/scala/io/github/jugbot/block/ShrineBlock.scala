@@ -2,6 +2,7 @@ package io.github.jugbot.block
 
 import io.github.jugbot.blockentity.ShrineBlockEntity
 import io.github.jugbot.screen.ShrineScreen
+import net.fabricmc.api.{EnvType, Environment}
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket
@@ -39,9 +40,13 @@ class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
         InteractionResult.sidedSuccess(level.isClientSide)
       case _ => InteractionResult.PASS
 
+  @Environment(EnvType.CLIENT)
+  private def handlePlayerOpenMenuClient(blockEntity: ShrineBlockEntity): Unit =
+    Minecraft.getInstance().setScreen(new ShrineScreen(blockEntity))
+
   private def handlePlayerOpenMenu(player: Player, blockEntity: ShrineBlockEntity): Unit =
     if player.isLocalPlayer then {
-      Minecraft.getInstance().setScreen(new ShrineScreen(blockEntity))
+      handlePlayerOpenMenuClient(blockEntity)
     } else {
       player
         .asInstanceOf[ServerPlayer]
