@@ -27,7 +27,7 @@ class FaeEntityModel(modelPart: ModelPart) extends HumanoidModel[FaeEntity](mode
   override protected def bodyParts: lang.Iterable[ModelPart] = Iterables.concat(
     super.bodyParts(),
     ImmutableList.of(this.leftPants, this.rightPants, this.leftSleeve, this.rightSleeve, this.jacket)
-  );
+  )
 
   // def renderEars(poseStack: Nothing, vertexConsumer: Nothing, i: Int, j: Int): Unit = {
   //   this.ear.copyFrom(this.head)

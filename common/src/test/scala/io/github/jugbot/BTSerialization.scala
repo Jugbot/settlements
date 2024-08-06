@@ -5,13 +5,7 @@ import io.github.jugbot.ai.*
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class BTSerialization extends AnyFunSuite with Matchers {
-  private object ExampleBehavior {
-    val EAT = "eat"
-    val SLEEP = "sleep"
-    val RAVE = "rave"
-    val REPEAT = "repeat"
-  }
+class BehaviorTreeSerialization extends UnitSuite {
   val jsonFixture: String = """{
                               |  sequence : [ "eat(food=bagel)", "repeat", {
                               |    selector : [ "sleep" ]
@@ -19,22 +13,10 @@ class BTSerialization extends AnyFunSuite with Matchers {
                               |}""".stripMargin
 
   val treeFixture: ParameterizedNode = SequenceNode(
-    ActionNode(ExampleBehavior.EAT, Map("food" -> "bagel")),
-    ActionNode(ExampleBehavior.REPEAT, Map.empty),
-    SelectorNode(ActionNode(ExampleBehavior.SLEEP, Map.empty))
+    ActionNode("eat", Map("food" -> "bagel")),
+    ActionNode("repeat", Map.empty),
+    SelectorNode(ActionNode("sleep", Map.empty))
   )
-
-  test("serializes enum to json") {
-    val result: String = BTMapper.mapper.writeValueAsString(ActionNode(ExampleBehavior.EAT, Map("food" -> "bagel")))
-
-    result shouldEqual """"eat(food=bagel)""""
-  }
-
-  test("deserializes json to enum") {
-    val result = BTMapper.mapper.readValue("{eat: {food:\"bagel\"}}", classOf[Node[ParameterizedAction]])
-
-    result shouldEqual ActionNode(ExampleBehavior.EAT, Map("food" -> "bagel"))
-  }
 
   test("serializes to json") {
     val result = BTMapper.mapper.writeValueAsString(treeFixture)
@@ -47,5 +29,84 @@ class BTSerialization extends AnyFunSuite with Matchers {
       BTMapper.mapper.readValue(jsonFixture, classOf[ParameterizedNode])
 
     result shouldEqual treeFixture
+  }
+}
+
+class ActionNodeSerialization extends UnitSuite {
+  val node = ActionNode("eat", Map("food" -> "bagel"))
+  val jsonShorthand = """"eat(food=bagel)""""
+  val json = """{eat: {food:"bagel"}}"""
+
+  test("serializes node to json shorthand") {
+    val result: String = BTMapper.mapper.writeValueAsString(node)
+
+    result shouldEqual jsonShorthand
+  }
+
+  test("deserializes json to node") {
+    val result = BTMapper.mapper.readValue(json, classOf[Node[ParameterizedAction]])
+
+    result shouldEqual node
+  }
+
+  test("deserializes json shorthand to node") {
+    val result = BTMapper.mapper.readValue(jsonShorthand, classOf[Node[ParameterizedAction]])
+
+    result shouldEqual node
+  }
+}
+
+class ConditionalNodeSerialization extends UnitSuite {
+  val node = ConditionNode(ActionNode("eat", Map()), ActionNode("sleep", Map()), ActionNode("rave", Map()))
+  val json = """{condition: {if:"eat", then:"sleep", else: "rave"}}"""
+
+  ignore("serializes node to json") {
+    val result: String = BTMapper.mapper.writeValueAsString(node)
+
+    result shouldEqual json
+  }
+
+  test("deserializes json to node") {
+    val result = BTMapper.mapper.readValue(json, classOf[Node[ParameterizedAction]])
+
+    result shouldEqual node
+  }
+}
+
+class SequenceNodeSerialization extends UnitSuite {
+  val node = SequenceNode(ActionNode("eat", Map()), ActionNode("sleep", Map()), ActionNode("rave", Map()))
+  val json = """{
+               |  sequence : [ "eat", "sleep", "rave" ]
+               |}""".stripMargin
+
+  test("serializes node to json") {
+    val result: String = BTMapper.mapper.writeValueAsString(node)
+
+    result shouldEqual json
+  }
+
+  test("deserializes json to node") {
+    val result = BTMapper.mapper.readValue(json, classOf[Node[ParameterizedAction]])
+
+    result shouldEqual node
+  }
+}
+
+class SelectorNodeSerialization extends UnitSuite {
+  val node = SelectorNode(ActionNode("eat", Map()), ActionNode("sleep", Map()), ActionNode("rave", Map()))
+  val json = """{
+               |  selector : [ "eat", "sleep", "rave" ]
+               |}""".stripMargin
+
+  test("serializes node to json") {
+    val result: String = BTMapper.mapper.writeValueAsString(node)
+
+    result shouldEqual json
+  }
+
+  test("deserializes json to node") {
+    val result = BTMapper.mapper.readValue(json, classOf[Node[ParameterizedAction]])
+
+    result shouldEqual node
   }
 }

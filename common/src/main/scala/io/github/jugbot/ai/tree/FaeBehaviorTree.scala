@@ -41,6 +41,8 @@ object FaeBehavior {
   case class create_nav_path_to(blockPos: String) extends FaeBehavior
   case class current_path_unobstructed() extends FaeBehavior
   case class move_along_current_path() extends FaeBehavior
+  case class is_sleeping() extends FaeBehavior
+  case class stop_sleeping() extends FaeBehavior
 
   def valueOf(name: String, args: Map[String, String]): Option[FaeBehavior] =
     io.github.jugbot.meta.valueOf[FaeBehavior](name, args)

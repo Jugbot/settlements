@@ -47,7 +47,7 @@ def perform(result: ArrayBuffer[String])(action: String, parameters: Map[String,
   }
 }
 
-class BehaviorTreeModules extends AnyFunSuite with Matchers {
+class BehaviorTreeModules extends UnitSuite {
   test("calls module with parameters") {
     val result = ArrayBuffer.empty[String]
     val root: ParameterizedNode = SequenceNode(

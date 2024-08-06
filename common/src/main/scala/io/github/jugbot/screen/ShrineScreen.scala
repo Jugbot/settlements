@@ -56,5 +56,5 @@ class ShrineScreen(blockEntity: ShrineBlockEntity) extends Screen(GameNarrator.N
 object ShrineScreen {
   private val imageWidth = 248
   private val imageHeight = 166
-  private val background = new ResourceLocation(Mod.MOD_ID, "textures/gui/shrine.png");
+  private val background = new ResourceLocation(Mod.MOD_ID, "textures/gui/shrine.png")
 }

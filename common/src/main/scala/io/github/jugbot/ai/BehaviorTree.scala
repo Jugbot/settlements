@@ -6,6 +6,7 @@ sealed trait Node[A]
 case class ActionNode[A](action: A) extends Node[A]
 case class SequenceNode[A](children: Node[A]*) extends Node[A]
 case class SelectorNode[A](children: Node[A]*) extends Node[A]
+case class ConditionNode[A](ifNode: Node[A], thenNode: Node[A], elseNode: Node[A]) extends Node[A]
 
 // Status Enum
 sealed trait BehaviorStatus
@@ -18,6 +19,16 @@ def run[A](node: Node[A], perform: Perform[A]): BehaviorStatus = node match {
   case ActionNode(action)      => perform(action)
   case SequenceNode(children*) => runSequence(children, run(_, perform))
   case SelectorNode(children*) => runSelector(children, run(_, perform))
+  case value: ConditionNode[A] => runIfElse(value, run(_, perform))
+}
+
+private def runIfElse[A](node: ConditionNode[A], cb: Function[Node[A], BehaviorStatus]) = {
+  val result = cb(node.ifNode)
+  result match {
+    case BehaviorSuccess => cb(node.thenNode)
+    case BehaviorFailure => cb(node.elseNode)
+    case _               => result
+  }
 }
 
 // Method for running sequence nodes
