@@ -11,8 +11,8 @@ sealed trait MyEnum
 case class One() extends MyEnum
 case class Two(value: String) extends MyEnum
 
-class EnumUtilsTest extends AnyFunSuite with Matchers {
-  def wrapper(arg: String, m: Map[String, String] = Map.empty) = valueOf[MyEnum](arg, m)
+class EnumUtilsTest extends UnitSuite {
+  private def wrapper(arg: String, m: Map[String, String] = Map.empty) = valueOf[MyEnum](arg, m)
   test("valueOf with correct name returns some") {
     val myEnum = wrapper("One")
     myEnum shouldEqual Some(One())

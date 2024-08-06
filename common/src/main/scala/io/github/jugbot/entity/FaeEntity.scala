@@ -58,13 +58,10 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
 
   private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
     val maybeBehavior = FaeBehavior.valueOf(name, args)
-    if maybeBehavior.isEmpty then
-      throw new Exception(s"Encountered unknown behavior: $name with $args")
-      return BehaviorFailure
+    if maybeBehavior.isEmpty then throw new Exception(s"Encountered unknown behavior: $name with $args")
     maybeBehavior.get match {
       case FaeBehavior.unknown() =>
         throw new Exception("Encountered an unknown behavior. There is likely a problem with your config.")
-        BehaviorFailure
       case FaeBehavior.unimplemented() =>
         BehaviorSuccess
       case FaeBehavior.is_tired() =>
@@ -80,15 +77,23 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
           BehaviorSuccess
         else BehaviorFailure
       case FaeBehavior.bed_is_valid() =>
+        val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager
         val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(bedPosition.get)
-        if blockState.is(BlockTags.BEDS) && blockState
-            .getValue(BedBlock.OCCUPIED) == false
+        if blockState.is(BlockTags.BEDS)
         then BehaviorSuccess
         else BehaviorFailure
       case FaeBehavior.claim_bed() =>
         val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager
         // TODO: instead of finding beds within a distance we should keep record of all beds within the kingdom
-        val takenPOI = poiManager.take(holder => holder.is(PoiTypes.HOME), (_, _) => true, this.blockPosition, 32)
+        val takenPOI = poiManager.take(
+          holder => holder.is(PoiTypes.HOME),
+          (_, bp) => {
+            val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(bp)
+            blockState.is(BlockTags.BEDS) && blockState.getValue(BedBlock.OCCUPIED) == false
+          },
+          this.blockPosition,
+          32
+        )
         bedPosition = if takenPOI.isPresent then Some(takenPOI.get) else None
         bedPosition match {
           case Some(value) => BehaviorSuccess
@@ -125,6 +130,11 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
           nav.tick()
           BehaviorRunning
         else BehaviorSuccess
+      case FaeBehavior.is_sleeping() =>
+        if this.isSleeping then BehaviorSuccess else BehaviorFailure
+      case FaeBehavior.stop_sleeping() =>
+        this.stopSleeping()
+        BehaviorSuccess
     }
 
   override def die(damageSource: DamageSource): Unit = {
@@ -179,7 +189,7 @@ object FaeEntity {
     LivingEntity
       .createLivingAttributes()
       .add(Attributes.MAX_HEALTH, 10.0)
-      .add(Attributes.MOVEMENT_SPEED, 1.0f)
+      .add(Attributes.MOVEMENT_SPEED, 0.3f)
       .add(Attributes.FOLLOW_RANGE, 20f)
 
 }

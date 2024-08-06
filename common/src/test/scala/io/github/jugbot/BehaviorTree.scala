@@ -1,17 +1,21 @@
 package io.github.jugbot
 
-import io.github.jugbot.ai.ActionNode
-import io.github.jugbot.ai.BehaviorFailure
-import io.github.jugbot.ai.Node
-import io.github.jugbot.ai.SelectorNode
-import io.github.jugbot.ai.SequenceNode
-import io.github.jugbot.ai.BehaviorStatus
-import io.github.jugbot.ai.BehaviorSuccess
+import io.github.jugbot.ai.{
+  run as state,
+  ActionNode,
+  BehaviorFailure,
+  BehaviorStatus,
+  BehaviorSuccess,
+  IfElseNode,
+  Node,
+  SelectorNode,
+  SequenceNode
+}
+import net.minecraft.world.entity.ai.behavior.Behavior
 import org.scalatest.funsuite.AnyFunSuite
-import io.github.jugbot.ai.run as state
 import org.scalatest.matchers.should.Matchers
 
-class BehaviorTree extends AnyFunSuite with Matchers {
+class BehaviorTree extends UnitSuite {
   test("example behavior tree") {
     enum ExampleBehaviors {
       case EAT
@@ -72,5 +76,25 @@ class BehaviorTree extends AnyFunSuite with Matchers {
   test("SelectorNode returns failure all actions are failure") {
     val node = SelectorNode(ActionNode(1), ActionNode(2), ActionNode(3))
     state(node, actionFailure) should equal(BehaviorFailure)
+  }
+
+  test("ConditionNode returns failure 1") {
+    val node = IfElseNode(ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure))
+    state(node, identity[BehaviorStatus]) should equal(BehaviorFailure)
+  }
+
+  test("ConditionNode returns failure 2") {
+    val node = IfElseNode(ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess))
+    state(node, identity[BehaviorStatus]) should equal(BehaviorFailure)
+  }
+
+  test("ConditionNode returns success 1") {
+    val node = IfElseNode(ActionNode(BehaviorSuccess), ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure))
+    state(node, identity[BehaviorStatus]) should equal(BehaviorSuccess)
+  }
+
+  test("ConditionNode returns success 2") {
+    val node = IfElseNode(ActionNode(BehaviorFailure), ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess))
+    state(node, identity[BehaviorStatus]) should equal(BehaviorSuccess)
   }
 }

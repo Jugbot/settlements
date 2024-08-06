@@ -28,6 +28,9 @@ import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.jdk.CollectionConverters.MapHasAsJava
 import com.fasterxml.jackson.core.JsonGenerator.Feature
 import com.fasterxml.jackson.core.json.JsonWriteFeature
+import com.fasterxml.jackson.core.`type`.TypeReference
+import com.fasterxml.jackson.databind.`type`.TypeFactory
+import scala.collection.mutable
 
 type T = Any
 
@@ -45,11 +48,51 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
     this.genericDeserializer = genericDeserializer
   }
 
-  private def deserializeStringPart(
+  private def deserializeSeq[T](
+    p: JsonParser,
+    ctxt: DeserializationContext,
+    injest: (p: JsonParser, ctxt: DeserializationContext) => T
+  ): Seq[T] = {
+    if p.getCurrentToken != JsonToken.START_ARRAY then {
+      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
+    }
+    p.nextToken()
+    var children = Seq[T]()
+    while p.currentToken() != JsonToken.END_ARRAY do children :+= injest(p, ctxt)
+    p.nextToken()
+    children
+  }
+
+  private def deserializeObj[T](
+    p: JsonParser,
+    ctxt: DeserializationContext,
+    injest: (keyName: String, p: JsonParser, ctxt: DeserializationContext) => T
+  ): Map[String, T] = {
+    if p.getCurrentToken != JsonToken.START_OBJECT then {
+      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
+    }
+    p.nextToken()
+    var result = Map[String, T]()
+    while p.currentToken() == JsonToken.FIELD_NAME do {
+      val nodeType = p.currentName()
+      p.nextToken()
+      result += ((nodeType, injest(nodeType, p, ctxt)))
+    }
+    if p.currentToken() != JsonToken.END_OBJECT then {
+      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected END_OBJECT")
+    }
+    p.nextToken()
+    result
+  }
+
+  private def deserializeNodeString(
     p: JsonParser,
     ctxt: DeserializationContext
   ): Node[T] = {
     val raw = p.getValueAsString()
+    if raw == null then {
+      throw ctxt.reportBadDefinition(classOf[Node[T]], f"could not read string at ${p.currentLocation}")
+    }
     p.nextToken()
 
     val (Array(behaviorType), args) = raw.split("""[(),]""").splitAt(1)
@@ -67,60 +110,50 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
     ActionNode(behaviorType, argMap)
   }
 
-  private def deserializeSeqPart(
+  private def deserializeNodeEntry(
+    nodeType: String,
     p: JsonParser,
     ctxt: DeserializationContext
-  ): Seq[Node[T]] = {
-    if p.getCurrentToken != JsonToken.START_ARRAY then {
-      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
-    }
-    p.nextToken()
-    var children = Seq[Node[T]]()
-    while p.currentToken() != JsonToken.END_ARRAY do
-      if p.currentToken() == JsonToken.START_OBJECT then children :+= deserializeObjPart(p, ctxt)
-      else children :+= deserializeStringPart(p, ctxt)
-    p.nextToken()
-    children
-  }
-
-  private def deserializeObjPart(
-    p: JsonParser,
-    ctxt: DeserializationContext
-  ): Node[T] = {
-    if p.getCurrentToken != JsonToken.START_OBJECT then {
-      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected START_OBJECT")
-    }
-    if p.nextToken() != JsonToken.FIELD_NAME then {
-      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected FIELD_NAME")
-    }
-    val nodeType = p.currentName()
-    val node = nodeType match {
+  ): Node[T] =
+    nodeType match {
       case "selector" =>
-        p.nextToken()
-        val children = deserializeSeqPart(p, ctxt)
+        val children = deserializeSeq(p, ctxt, deserializeNode)
         SelectorNode[T](children*)
       case "sequence" =>
-        p.nextToken()
-        val children = deserializeSeqPart(p, ctxt)
+        val children = deserializeSeq(p, ctxt, deserializeNode)
         SequenceNode[T](children*)
+      case "condition" =>
+        val args = deserializeObj(p, ctxt, (_, _p, _ctxt) => deserializeNode(_p, _ctxt))
+        IfElseNode[T](args("if"), args("then"), args("else"))
       case action =>
-        p.nextToken()
-        val args = p.readValueAs(classOf[Map[String, String]])
-        p.nextToken()
+        val args = deserializeObj(p,
+                                  ctxt,
+                                  (_, p, _) => {
+                                    val value = p.getValueAsString()
+                                    p.nextToken()
+                                    value
+                                  }
+        )
+
         ActionNode[T](action, args)
     }
-    if p.currentToken() != JsonToken.END_OBJECT then {
-      throw ctxt.reportBadDefinition(classOf[Node[T]], "expected END_OBJECT")
+
+  private def deserializeNode(
+    p: JsonParser,
+    ctxt: DeserializationContext
+  ): Node[T] =
+    if p.isExpectedStartObjectToken() then {
+      val m = deserializeObj(p, ctxt, deserializeNodeEntry(_, _, _))
+      m.head(1)
+    } else {
+      deserializeNodeString(p, ctxt)
     }
-    p.nextToken()
-    node
-  }
 
   override def deserialize(
     p: JsonParser,
     ctxt: DeserializationContext
   ): Node[T] =
-    deserializeObjPart(p, ctxt)
+    deserializeNode(p, ctxt)
 }
 
 object NodeSerializer extends StdSerializer[ParameterizedNode](classOf[ParameterizedNode]) {
@@ -149,6 +182,7 @@ object NodeSerializer extends StdSerializer[ParameterizedNode](classOf[Parameter
         serializeSingleFieldObject("selector", children);
       case SequenceNode(children*) =>
         serializeSingleFieldObject("sequence", children);
+      case _ => ???
     }
   }
 }
