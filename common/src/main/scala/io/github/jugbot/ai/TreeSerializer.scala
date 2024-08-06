@@ -142,7 +142,7 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
     p: JsonParser,
     ctxt: DeserializationContext
   ): Node[T] =
-    if p.isExpectedStartObjectToken() then {
+    if p.isExpectedStartObjectToken then {
       val m = deserializeObj(p, ctxt, deserializeNodeEntry(_, _, _))
       m.head(1)
     } else {

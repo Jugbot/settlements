@@ -75,5 +75,5 @@ def isValidTree(m: Map[String, ParameterizedNode], serializerTest: SerializerTes
       }
     }
 
-  return isValidNode(m("root"))
+  isValidNode(m("root"))
 }

@@ -19,9 +19,9 @@ import scala.jdk.StreamConverters.*
 
 import java.util.function.Supplier
 
-case class BlockStateRequirement(val state: TagKey[Block] | Block | BlockState,
-                                 val total: Int,
-                                 val satisfied: Int = 0
+case class BlockStateRequirement(state: TagKey[Block] | Block | BlockState,
+                                 total: Int,
+                                 satisfied: Int = 0
 ) {
   private def getPredicate: BlockState => Boolean =
     state match {
