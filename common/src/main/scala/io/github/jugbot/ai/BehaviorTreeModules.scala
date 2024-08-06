@@ -59,7 +59,7 @@ def isValidTree(m: Map[String, ParameterizedNode], serializerTest: SerializerTes
         if m.contains(name) then {
           dfsNode(m(name), stack :+ node, visited + node)
         } else visited + node
-      case IfElseNode(ifNode, thenNode, elseNode) => visitChildren(Seq(ifNode, thenNode, elseNode))
+      case ConditionNode(ifNode, thenNode, elseNode) => visitChildren(Seq(ifNode, thenNode, elseNode))
     }
   }
   def isValidNode(node: ParameterizedNode): Boolean =

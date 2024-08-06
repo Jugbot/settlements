@@ -124,7 +124,7 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
         SequenceNode[T](children*)
       case "condition" =>
         val args = deserializeObj(p, ctxt, (_, _p, _ctxt) => deserializeNode(_p, _ctxt))
-        IfElseNode[T](args("if"), args("then"), args("else"))
+        ConditionNode[T](args("if"), args("then"), args("else"))
       case action =>
         val args = deserializeObj(p,
                                   ctxt,

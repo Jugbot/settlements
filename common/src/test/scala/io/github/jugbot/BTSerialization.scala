@@ -57,7 +57,7 @@ class ActionNodeSerialization extends UnitSuite {
 }
 
 class ConditionalNodeSerialization extends UnitSuite {
-  val node = IfElseNode(ActionNode("eat", Map()), ActionNode("sleep", Map()), ActionNode("rave", Map()))
+  val node = ConditionNode(ActionNode("eat", Map()), ActionNode("sleep", Map()), ActionNode("rave", Map()))
   val json = """{condition: {if:"eat", then:"sleep", else: "rave"}}"""
 
   ignore("serializes node to json") {

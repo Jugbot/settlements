@@ -6,7 +6,7 @@ import io.github.jugbot.ai.{
   BehaviorFailure,
   BehaviorStatus,
   BehaviorSuccess,
-  IfElseNode,
+  ConditionNode,
   Node,
   SelectorNode,
   SequenceNode
@@ -79,22 +79,22 @@ class BehaviorTree extends UnitSuite {
   }
 
   test("ConditionNode returns failure 1") {
-    val node = IfElseNode(ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure))
+    val node = ConditionNode(ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure))
     state(node, identity[BehaviorStatus]) should equal(BehaviorFailure)
   }
 
   test("ConditionNode returns failure 2") {
-    val node = IfElseNode(ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess))
+    val node = ConditionNode(ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess))
     state(node, identity[BehaviorStatus]) should equal(BehaviorFailure)
   }
 
   test("ConditionNode returns success 1") {
-    val node = IfElseNode(ActionNode(BehaviorSuccess), ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure))
+    val node = ConditionNode(ActionNode(BehaviorSuccess), ActionNode(BehaviorSuccess), ActionNode(BehaviorFailure))
     state(node, identity[BehaviorStatus]) should equal(BehaviorSuccess)
   }
 
   test("ConditionNode returns success 2") {
-    val node = IfElseNode(ActionNode(BehaviorFailure), ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess))
+    val node = ConditionNode(ActionNode(BehaviorFailure), ActionNode(BehaviorFailure), ActionNode(BehaviorSuccess))
     state(node, identity[BehaviorStatus]) should equal(BehaviorSuccess)
   }
 }
