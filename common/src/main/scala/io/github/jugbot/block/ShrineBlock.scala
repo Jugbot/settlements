@@ -7,7 +7,9 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.BaseEntityBlock.createTickerHelper
 import net.minecraft.world.level.block.entity.{BlockEntity, BlockEntityTicker, BlockEntityType}
@@ -62,6 +64,19 @@ class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
                        ShrineBlockEntity.TYPE.get(),
                        (world1, pos, state1, be) => ShrineBlockEntity.tick(world1, pos, state1, be)
     )
+
+  override def setPlacedBy(level: Level,
+                           blockPos: BlockPos,
+                           blockState: BlockState,
+                           livingEntity: LivingEntity,
+                           itemStack: ItemStack
+  ): Unit = {
+    val blockEntity = level.getBlockEntity(blockPos)
+    (blockEntity, livingEntity) match {
+      case (shrineBlockEntity: ShrineBlockEntity, player: Player) =>
+        shrineBlockEntity.owners += player.getUUID
+    }
+  }
 }
 
 object ShrineBlock {
