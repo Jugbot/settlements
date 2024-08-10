@@ -267,7 +267,9 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
       case FaeBehavior.holds(itemQuery, min, max) =>
         val count = FaeEntity.count(items)(itemQuery)
         if count >= min.toInt && count <= max.toInt then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.obtain_job() => ???
+      case FaeBehavior.obtain_job() => 
+        blackboard.update("job", "farmer")
+        BehaviorSuccess
       case FaeBehavior.equals_literal(key, value) => blackboard.get(key) match {
         case Some(v) if v == value => BehaviorSuccess
         case _ => BehaviorFailure
