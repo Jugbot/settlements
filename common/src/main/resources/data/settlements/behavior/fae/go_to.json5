@@ -1,12 +1,12 @@
 {
   selector: [
-    "is_at_location(blockPos=$blockPos)",
+    "is_at_location(target=$target)",
     {
       sequence: [
         {
           selector: [
-            "has_nav_path_to(blockPos=$blockPos)",
-            "create_nav_path_to(blockPos=$blockPos)",
+            "has_nav_path_to(target=$target)",
+            "create_nav_path_to(target=$target)",
           ],
         },
         "current_path_unobstructed",

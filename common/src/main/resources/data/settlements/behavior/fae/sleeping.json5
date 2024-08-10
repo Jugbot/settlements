@@ -9,20 +9,18 @@
               sequence: [
                 "has(value=bed_position)",
                 "bed_is_valid"
-              ]
+              ],
             },
-            "claim_bed"
-          ]
+            "claim_bed",
+          ],
         },
-        "go_to_block(blockPos=bed_position)",
-        "sleep"
-      ]
+        "set(key=target, value=bed_position",
+        "go_to_target",
+        "sleep",
+      ],
     },
     else: {
-      sequence: [
-        "is_sleeping",
-        "stop_sleeping"
-      ]
-    }
+      sequence: ["is_sleeping", "stop_sleeping"],
+    },
   },
 }

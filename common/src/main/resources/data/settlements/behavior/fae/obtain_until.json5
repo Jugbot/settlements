@@ -1,0 +1,6 @@
+{
+  selector: [
+    "holds_at_least(item=$item, amount=$amount)",
+    "satisfy_resource_from_block(item=$item, min=$amount, max=$amount)",
+  ],
+}

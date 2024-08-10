@@ -1,0 +1,6 @@
+{
+  sequence: [
+    { selector: ["has(value=job)", "obtain_job"] },
+    { selector: [{ sequence: ["job_is(value=farmer)", "farmer"] }] },
+  ],
+}

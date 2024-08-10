@@ -1,0 +1,12 @@
+{
+  sequence: [
+    {
+      selector: [
+        "holds_at_least(item=$item, amount=$min)",
+        "obtain_until(item=$item, amount=$max)",
+        "obtain_until(item=$item, amount=$min)",
+      ],
+    },
+    "deposit_until(item=$item, amount=$max)",
+  ],
+}

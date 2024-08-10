@@ -1,5 +1,3 @@
 {
-  sequence: [
-    'sleeping'
-  ]
+  sequence: ["sleeping"],
 }
