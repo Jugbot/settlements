@@ -49,31 +49,30 @@ def isValidTree(m: Map[String, ParameterizedNode], serializerTest: SerializerTes
       )
     if visited.contains(node) then return visited
 
-    def visitChildren(children: Seq[ParameterizedNode]) =
-      children.foldLeft(visited)((acc, n) => dfsNode(n, stack :+ node, visited + node))
+    def visitChildren(children: ParameterizedNode*) =
+      children.foldLeft(visited)((acc, n) => acc ++ dfsNode(n, stack :+ node, visited + node))
 
     node match {
-      case SelectorNode(children*) => visitChildren(children)
-      case SequenceNode(children*) => visitChildren(children)
+      case SelectorNode(children*) => visitChildren(children*)
+      case SequenceNode(children*) => visitChildren(children*)
       case ActionNode(name, args) =>
         if m.contains(name) then {
-          dfsNode(m(name), stack :+ node, visited + node)
+          visitChildren(m(name))
         } else visited + node
-      case ConditionNode(ifNode, thenNode, elseNode) => visitChildren(Seq(ifNode, thenNode, elseNode))
+      case ConditionNode(ifNode, thenNode, elseNode) => visitChildren(ifNode, thenNode, elseNode)
     }
   }
-  def isValidNode(node: ParameterizedNode): Boolean =
-    dfsNode(node).forall { node =>
-      node match {
-        case ActionNode(name, args) =>
-          // TODO: Verify var args are satisfied.
-          if serializerTest(name, args).isDefined || (m.contains(name) && isValidNode(m(name))) then true
-          else
-            LOGGER.error(s"Could not map '$name' to any known behavior with arguments $args")
-            false
-        case _ => true
-      }
-    }
 
-  isValidNode(m("root"))
+  val allNodes = dfsNode(m("root"))
+  allNodes.forall { node =>
+    node match {
+      case ActionNode(name, args) =>
+        // TODO: Verify var args are satisfied.
+        if serializerTest(name, args).isDefined || m.contains(name) then true
+        else
+          LOGGER.error(s"Could not map '$name' to any known behavior with arguments $args")
+          false
+      case _ => true
+    }
+  }
 }

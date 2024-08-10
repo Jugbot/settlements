@@ -105,7 +105,8 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
         blackboard.get(SPECIAL_KEYS.BED_POSITION) match {
           case Some(bedPosition: BlockPos) =>
             this.startSleeping(bedPosition)
-            BehaviorSuccess
+            // Return running here so that follow up tasks are not executed
+            BehaviorRunning
           case _ => BehaviorFailure
         }
       case FaeBehavior.bed_is_valid() =>
@@ -137,7 +138,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
       case FaeBehavior.is_at_location(key) =>
         blackboard.get(key) match {
           case Some(blockPos: BlockPos)
-              if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.14) =>
+              if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.5) =>
             BehaviorSuccess
           case _ => BehaviorFailure
         }
@@ -263,6 +264,14 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
           case None        => blackboard.remove(to)
         }
         BehaviorSuccess
+      case FaeBehavior.holds(itemQuery, min, max) =>
+        val count = FaeEntity.count(items)(itemQuery)
+        if count >= min.toInt && count <= max.toInt then BehaviorSuccess else BehaviorFailure
+      case FaeBehavior.obtain_job() => ???
+      case FaeBehavior.equals_literal(key, value) => blackboard.get(key) match {
+        case Some(v) if v == value => BehaviorSuccess
+        case _ => BehaviorFailure
+      }
     }
     profiler.pop()
     status

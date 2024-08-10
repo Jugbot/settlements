@@ -55,6 +55,9 @@ object FaeBehavior {
   case class target_nearest_stockpile_with(item: String) extends FaeBehavior
   case class transfer_item_from_target_until(item: String, amount: String) extends FaeBehavior
   case class transfer_item_to_target_until(item: String, amount: String) extends FaeBehavior
+  case class holds(item: String, min: String, max: String) extends FaeBehavior
+  case class obtain_job() extends FaeBehavior
+  case class equals_literal(key: String, value: String) extends FaeBehavior
 
   def valueOf(name: String, args: Map[String, String]): Option[FaeBehavior] =
     io.github.jugbot.meta.valueOf[FaeBehavior](name, args)
@@ -72,7 +75,7 @@ object FaeBehaviorTree {
       Try[ParameterizedNode](BTMapper.mapper.readValue(reader, classOf[ParameterizedNode])) match {
         case Success(value) => value
         case Failure(exception) =>
-          LOGGER.warn(f"Unable to parse custom behavior for '${location.getNamespace()}:${location.getPath}'")
+          LOGGER.warn(f"Unable to parse custom behavior for '${location.getNamespace}:${location.getPath}'")
           LOGGER.warn(exception)
           fallback
       }

@@ -4,7 +4,7 @@
     {
       selector: [
         "eat_food",
-        "satisfy_resource_greedy(food=c#food, min=1, max=64)",
+        "satisfy_greedy(item=c#food, min=1, max=64)",
       ],
     },
   ],

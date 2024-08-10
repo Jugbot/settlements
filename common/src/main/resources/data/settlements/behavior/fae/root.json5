@@ -1,3 +1,6 @@
 {
-  sequence: ["survival"],
+  sequence: [
+    "survival",
+    "profession"
+  ],
 }
