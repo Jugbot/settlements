@@ -2,7 +2,7 @@
   selector: [
     {
       sequence: [
-        "target_closest_block(block=minecraft#crops)",
+        "target_closest_block(block=minecraft:wheat[age=7])",
         "has_space_for_target_produce",
         "go_to_target",
         "break_block(blockPos=target)",
@@ -10,10 +10,10 @@
     },
     {
       sequence: [
-        "satisfy_greedy(item=minecraft#villager_plantable_seeds, min=1, max=64)",
+        "satisfy_greedy(item=#villager_plantable_seeds, min=1, max=64)",
         "target_closest_block(block=minecraft:farmland)",
         "go_to_target",
-        "use_item_on_block(item=minecraft#villager_plantable_seeds, blockPos=target, side=top)",
+        "use_item_on_block(item=#villager_plantable_seeds, blockPos=target, side=top)",
       ],
     },
     "deposit_until(item=minecraft:wheat, amount=0)",

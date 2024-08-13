@@ -20,7 +20,7 @@
       ],
     },
     else: {
-      sequence: ["is_sleeping", "stop_sleeping"],
+      selector: ["is_not_sleeping", "stop_sleeping"],
     },
   },
 }

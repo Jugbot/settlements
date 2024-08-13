@@ -1,29 +1,20 @@
 package io.github.jugbot.registry
 
-import com.fasterxml.jackson.databind.JavaType
 import dev.architectury.registry.ReloadListenerRegistry
 import dev.architectury.registry.level.entity.EntityAttributeRegistry
-import dev.architectury.registry.registries.DeferredRegister
-import dev.architectury.registry.registries.RegistrySupplier
+import dev.architectury.registry.registries.{DeferredRegister, RegistrySupplier}
 import io.github.jugbot.Mod
-import io.github.jugbot.ai.tree.{FaeBehavior, FaeBehaviorTree}
-import io.github.jugbot.ai.{BTMapper, Node}
+import io.github.jugbot.ai.tree.FaeBehaviorTree
+import io.github.jugbot.block.ShrineBlock
+import io.github.jugbot.blockentity.ShrineBlockEntity
 import io.github.jugbot.entity.FaeEntity
+import net.minecraft.core.registries.Registries as MojRegistries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.packs.PackType
-import net.minecraft.server.packs.resources.{ResourceManager, SimplePreparableReloadListener}
-import net.minecraft.util.profiling.ProfilerFiller
 import net.minecraft.world.entity.EntityType
-import io.github.jugbot.blockentity.ShrineBlockEntity
-import net.minecraft.world.level.block.entity.BlockEntityType
+import net.minecraft.world.item.{BlockItem, Item}
 import net.minecraft.world.level.block.Block
-import net.minecraft.world.item.Item
-import net.minecraft.core.registries.Registries as MojRegistries
-import io.github.jugbot.block.ShrineBlock
-import net.minecraft.world.level.block.state.BlockBehaviour
-import net.minecraft.world.level.block.Blocks
-import net.minecraft.world.item.BlockItem
-import net.minecraft.world.item.Item.Properties
+import net.minecraft.world.level.block.entity.BlockEntityType
 
 object Registries {
   final private val BLOCKS =

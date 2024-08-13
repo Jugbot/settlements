@@ -45,6 +45,7 @@ object FaeBehavior {
   case class current_path_unobstructed() extends FaeBehavior
   case class move_along_current_path() extends FaeBehavior
   case class is_sleeping() extends FaeBehavior
+  case class is_not_sleeping() extends FaeBehavior
   case class stop_sleeping() extends FaeBehavior
   case class target_closest_block(block: String) extends FaeBehavior
   case class has_space_for_target_produce() extends FaeBehavior

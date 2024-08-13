@@ -5,65 +5,44 @@ import com.mojang.brigadier.StringReader
 import io.github.jugbot.ai.*
 import io.github.jugbot.ai.tree.{FaeBehavior, FaeBehaviorTree}
 import net.minecraft.commands.CommandBuildContext
-import net.minecraft.commands.arguments.blocks.BlockStateArgument
-import net.minecraft.commands.arguments.item.ItemArgument
-import net.minecraft.core.RegistryAccess.ImmutableRegistryAccess
-import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.commands.arguments.blocks.BlockPredicateArgument
+import net.minecraft.commands.arguments.item.ItemPredicateArgument
 import net.minecraft.core.{BlockPos, Direction}
 import net.minecraft.nbt.{CompoundTag, NbtUtils}
 import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.BlockTags
 import net.minecraft.world.damagesource.DamageSource
+import net.minecraft.world.entity.*
 import net.minecraft.world.entity.ai.attributes.{AttributeSupplier, Attributes}
 import net.minecraft.world.entity.ai.village.poi.{PoiManager, PoiTypes}
-import net.minecraft.world.entity.*
-import net.minecraft.world.flag.FeatureFlagSet
+import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.BedBlock
 import net.minecraft.world.level.block.entity.{BlockEntityType, ChestBlockEntity}
 import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.level.block.state.pattern.BlockInWorld
 import net.minecraft.world.level.storage.loot.LootParams
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.{Container, InteractionHand, SimpleContainer}
 
 import java.util.function.Supplier
 import scala.collection.mutable
-import scala.jdk.CollectionConverters.{CollectionHasAsScala, SeqHasAsJava}
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.OptionConverters.RichOptional
 
-extension (inventory: Container) {
-  private def items = for {
-    i <- 0 until inventory.getContainerSize
-  } yield inventory.getItem(i)
-}
+import io.github.jugbot.extension.Container.*
 
-class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(entityType, world) {
-  private val extraInventory = new SimpleContainer(8)
 
-  private def items = {
-    val equipment = for {
-      slot <- EquipmentSlot.values()
-    } yield getItemBySlot(slot)
-    extraInventory.items ++ equipment
-  }
-
-  private def equipFromInventory(itemQuery: String, slot: EquipmentSlot) = {
-    val itemTester = FaeEntity.itemArgument.parse(StringReader(itemQuery))
-    val maybeItem = extraInventory.items.zipWithIndex.find((itemStack, _) => itemTester.test(itemStack))
-    maybeItem match {
-      case Some((itemStack, index)) =>
-        extraInventory.setItem(index, getItemBySlot(slot))
-        setItemSlot(slot, itemStack)
-        true
-      case None => false
-    }
-  }
+class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends InventoryMob(entityType, world) {
 
   override def isPushable: Boolean = false
 
   override def doPush(entity: Entity): Unit = {}
+
+  override def canPickUpLoot = true
 
   override def tick(): Unit = {
     super.tick()
@@ -138,7 +117,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
       case FaeBehavior.is_at_location(key) =>
         blackboard.get(key) match {
           case Some(blockPos: BlockPos)
-              if this.getY > blockPos.getY.toDouble + 0.4 && blockPos.closerToCenterThan(this.position, 1.5) =>
+              if this.getY + 0.4 > blockPos.getY.toDouble && blockPos.closerToCenterThan(this.position, 1.5) =>
             BehaviorSuccess
           case _ => BehaviorFailure
         }
@@ -168,14 +147,22 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
         else BehaviorSuccess
       case FaeBehavior.is_sleeping() =>
         if this.isSleeping then BehaviorSuccess else BehaviorFailure
+      case FaeBehavior.is_not_sleeping() =>
+        if !this.isSleeping then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.stop_sleeping() =>
         this.stopSleeping()
         BehaviorSuccess
       case FaeBehavior.target_closest_block(blockQuery) =>
-        val block = FaeEntity.blockStateArgument.parse(StringReader(blockQuery))
-        // if block.test(this.level().asInstanceOf[ServerLevel], (this.blockPosition)) then BehaviorSuccess else BehaviorFailure
+        val block = parseBlockPredicate((blockQuery))
         val maybeClosest = BlockPos
-          .findClosestMatch(this.blockPosition, 32, 32, bp => block.test(this.level().asInstanceOf[ServerLevel], bp))
+          .findClosestMatch(this.blockPosition,
+                            12,
+                            12,
+                            bp =>
+                              block.test(
+                                BlockInWorld(this.level(), bp, false)
+                              )
+          )
           .toScala
         maybeClosest match {
           case Some(value) =>
@@ -189,7 +176,13 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
             val items = this
               .level()
               .getBlockState(blockPos)
-              .getDrops(LootParams.Builder(this.level.asInstanceOf[ServerLevel]))
+              .getDrops(
+                LootParams
+                  .Builder(this.level.asInstanceOf[ServerLevel])
+                  .withParameter(LootContextParams.ORIGIN, this.position())
+                  .withParameter(LootContextParams.TOOL, this.getItemInHand(InteractionHand.MAIN_HAND))
+                  .withParameter(LootContextParams.THIS_ENTITY, this)
+              )
               .asScala
             // TODO: See if you can pick up all items not just individuals
             if items.forall(item => canTakeItem(item)) then BehaviorSuccess else BehaviorFailure
@@ -220,23 +213,27 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
             BehaviorFailure
         }
       case FaeBehavior.holds_at_least(itemQuery, amount) =>
-        if FaeEntity.count(items)(itemQuery) >= amount.toInt then BehaviorSuccess else BehaviorFailure
+        if count(items)(itemQuery) >= amount.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.holds_at_most(itemQuery, amount) =>
-        if FaeEntity.count(items)(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
+        if count(items)(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.target_nearest_stockpile_with(itemQuery) =>
-        val itemTester = FaeEntity.itemArgument.parse(StringReader(itemQuery))
+        val itemTester = parseItemPredicate((itemQuery))
         val maybeClosest = BlockPos
           .findClosestMatch(this.blockPosition,
-                            32,
-                            32,
+                            12,
+                            12,
                             bp => this.level.getBlockEntity(bp, BlockEntityType.CHEST).isPresent
           )
           .toScala
         maybeClosest match {
           case Some(blockPos) =>
             val chest = this.level.getBlockEntity(blockPos, BlockEntityType.CHEST).get
-            chest.items
-            BehaviorSuccess
+            chest.items.count(itemStack => itemTester.test(itemStack)) match {
+              case 0 => BehaviorFailure
+              case _ =>
+                blackboard.update(SPECIAL_KEYS.TARGET, blockPos)
+                BehaviorSuccess
+            }
           case None => BehaviorFailure
         }
       case FaeBehavior.transfer_item_from_target_until(itemQuery, amount) =>
@@ -244,7 +241,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
           this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala
         } match
           case Some(chest: ChestBlockEntity) =>
-            val success = FaeEntity.transferItems(chest, extraInventory, itemQuery, amount.toInt)
+            val success = transferItemsUntil(chest, extraInventory, itemQuery, amount.toInt)
             if success then BehaviorSuccess else BehaviorFailure
           case None => BehaviorFailure
       case FaeBehavior.transfer_item_to_target_until(itemQuery, amount) =>
@@ -252,10 +249,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
           this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala
         } match
           case Some(chest: ChestBlockEntity) =>
-            val copied = new SimpleContainer(chest.items*)
-            // TODO: Make signature use Container instead of SimpleContainer
-            val success = FaeEntity.transferItems(extraInventory, copied, itemQuery, amount.toInt)
-            copied.items.zipWithIndex.foreach((itemStack, index) => chest.setItem(index, itemStack))
+            val success = transferItemsUntil(extraInventory, chest, itemQuery, amount.toInt)
             if success then BehaviorSuccess else BehaviorFailure
           case None => BehaviorFailure
       case FaeBehavior.set(to, from) =>
@@ -265,7 +259,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
         }
         BehaviorSuccess
       case FaeBehavior.holds(itemQuery, min, max) =>
-        val count = FaeEntity.count(items)(itemQuery)
+        val count = this.count(items)(itemQuery)
         if count >= min.toInt && count <= max.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.obtain_job() =>
         blackboard.update("job", "farmer")
@@ -316,6 +310,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Mob(ent
       )
     }
   }
+
 }
 
 object FaeEntity {
@@ -335,39 +330,4 @@ object FaeEntity {
       .add(Attributes.MOVEMENT_SPEED, 0.3f)
       .add(Attributes.FOLLOW_RANGE, 20f)
 
-  private val blockStateArgument = BlockStateArgument(
-    CommandBuildContext.simple(ImmutableRegistryAccess(List(BuiltInRegistries.BLOCK).asJava), FeatureFlagSet.of())
-  )
-  private val itemArgument = ItemArgument(
-    CommandBuildContext.simple(ImmutableRegistryAccess(List(BuiltInRegistries.ITEM).asJava), FeatureFlagSet.of())
-  )
-
-  private def query(items: Seq[ItemStack])(itemQuery: String) = {
-    val itemTester = itemArgument.parse(StringReader(itemQuery))
-    items.zipWithIndex.filter((itemStack, _) => itemTester.test(itemStack))
-  }
-
-  private def count(items: Seq[ItemStack])(itemQuery: String) =
-    query(items)(itemQuery).map((i, _) => i).foldLeft(0)((acc, itemStack) => acc + itemStack.getCount)
-
-  private def transferItems(from: Container, to: SimpleContainer, itemQuery: String, amount: Int): Boolean = {
-    val slotsWithItem = query(from.items)(itemQuery)
-    val currentItemCount = count(to.items)(itemQuery)
-    var remaining = amount - currentItemCount
-    for {
-      (itemStack, index) <- slotsWithItem
-      if remaining > 0
-    } {
-      val toTransfer = Math.min(remaining, itemStack.getCount)
-      val newStack = itemStack.copy()
-      newStack.setCount(toTransfer)
-      val remainingStack = itemStack.copy()
-      remainingStack.setCount(itemStack.getCount - toTransfer)
-      from.setItem(index, remainingStack)
-      // TODO: Enable partial transfer?
-      if to.canAddItem(newStack) then to.addItem(newStack)
-      remaining -= toTransfer
-    }
-    remaining <= 0
-  }
 }
