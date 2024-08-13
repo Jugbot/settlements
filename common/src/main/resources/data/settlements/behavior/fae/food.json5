@@ -1,0 +1,11 @@
+{
+  sequence: [
+    "is_hungry",
+    {
+      selector: [
+        "eat_food",
+        "satisfy_greedy(item=c#food, min=1, max=64)",
+      ],
+    },
+  ],
+}

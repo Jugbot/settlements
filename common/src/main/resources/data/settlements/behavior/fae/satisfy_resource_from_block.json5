@@ -1,0 +1,24 @@
+{
+  selector: [
+    "holds(item=$item, min=$min, max=$max)",
+    {
+      condition: {
+        if: "holds_at_least(item=$item, amount=$min)",
+        then: {
+          sequence: [
+            "target_nearest_stockpile_with(item=air)",
+            "go_to_target",
+            "transfer_item_to_target_until(item=$item, amount=$max)",
+          ]
+        },
+        else: {
+          sequence: [
+            "target_nearest_stockpile_with(item=$item)",
+            "go_to_target",
+            "transfer_item_from_target_until(item=$item, amount=$min)",
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  selector: [
+    {
+      sequence: [
+        "has_nav_path_to(target=$target)",
+        {
+          selector: [
+            { 
+              sequence: [
+                "nav_ended", 
+                "reset_nav"
+              ] 
+            },
+            "move_along_current_path",
+          ],
+        },
+      ],
+    },
+    {
+      sequence: [
+        "create_nav_path_to(target=$target)",
+        //        "current_path_unobstructed",
+        "move_along_current_path",
+      ],
+    },
+  ],
+}

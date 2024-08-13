@@ -1,0 +1,6 @@
+{
+  sequence: [
+    "obtain_until(item=$item, amount=$min)",
+    "deposit_until(item=$item, amount=$max)",
+  ],
+}

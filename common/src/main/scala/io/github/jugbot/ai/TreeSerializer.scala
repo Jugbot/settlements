@@ -104,7 +104,7 @@ class NodeDeserializer extends StdDeserializer[Node[T]](classOf[Node[T]]) {
           classOf[String],
           f"Expected 'behaviorName(argName=argValue)' form in behavior definition at ${p.currentLocation}"
         )
-      (s.take(splitIndex), s.drop(splitIndex + 1))
+      (s.take(splitIndex).strip, s.drop(splitIndex + 1).strip)
     }.toMap
 
     ActionNode(behaviorType, argMap)

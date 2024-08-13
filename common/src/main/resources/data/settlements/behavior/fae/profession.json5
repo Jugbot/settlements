@@ -1,0 +1,6 @@
+{
+  sequence: [
+    { selector: ["has(value=job)", "obtain_job"] },
+    { selector: [{ sequence: ["equals_literal(key=job, value=farmer)", "farmer"] }] },
+  ],
+}
