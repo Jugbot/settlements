@@ -50,7 +50,7 @@ object FaeBehavior {
   case class target_closest_block(block: String) extends FaeBehavior
   case class has_space_for_target_produce() extends FaeBehavior
   case class break_block(blockPos: String) extends FaeBehavior
-  case class use_item_on_block(item: String, blockPos: String, side: String) extends FaeBehavior
+  case class place_item_on_block(item: String, blockPos: String, side: String) extends FaeBehavior
   case class holds_at_least(item: String, amount: String) extends FaeBehavior
   case class holds_at_most(item: String, amount: String) extends FaeBehavior
   case class target_nearest_stockpile_with(item: String) extends FaeBehavior

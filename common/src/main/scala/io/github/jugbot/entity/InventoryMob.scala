@@ -13,19 +13,6 @@ import net.minecraft.world.level.Level
 import io.github.jugbot.extension.Container.*
 import net.minecraft.world.entity.player.Player
 
-import scala.collection.mutable
-import scala.jdk.CollectionConverters.IterableHasAsScala
-
-//class DelegatedSeq[A] extends mutable.Seq[A] {
-//
-//  override def update(idx: Int, elem: A): Unit = ???
-//
-//  override def apply(i: Int): A = ???
-//
-//  override def length: Int = ???
-//
-//  override def iterator: Iterator[A] = ???
-//}
 
 class InventoryMob(entityType: EntityType[FaeEntity], world: Level) extends Mob(entityType, world), Container {
   private val extraInventory = new SimpleContainer(8)
@@ -39,12 +26,17 @@ class InventoryMob(entityType: EntityType[FaeEntity], world: Level) extends Mob(
     CommandBuildContext.simple(this.getServer.registryAccess(), this.getServer.getWorldData.enabledFeatures())
   ).parse(StringReader(itemQuery))
 
-  protected def items = {
-    extraInventory.items ++ this.getHandSlots.asScala ++ this.getArmorSlots.asScala
-  }
+  protected def items =
+    extraInventory.items
 
+  /**
+   * Moves an item from the extra inventory to the equipment slot if possible.
+   * @param itemQuery
+   * @param slot
+   * @return
+   */
   protected def equipFromInventory(itemQuery: String, slot: EquipmentSlot) = {
-    val itemTester = parseItemPredicate((itemQuery))
+    val itemTester = parseItemPredicate(itemQuery)
     val maybeItem = extraInventory.items.zipWithIndex.find((itemStack, _) => itemTester.test(itemStack))
     maybeItem match {
       case Some((itemStack, index)) =>
@@ -56,17 +48,25 @@ class InventoryMob(entityType: EntityType[FaeEntity], world: Level) extends Mob(
   }
 
   protected def query(items: Seq[ItemStack])(itemQuery: String) = {
-    val itemTester = parseItemPredicate((itemQuery))
+    val itemTester = parseItemPredicate(itemQuery)
     items.zipWithIndex.filter((itemStack, _) => itemTester.test(itemStack))
   }
 
   protected def count(items: Seq[ItemStack])(itemQuery: String) =
     query(items)(itemQuery).map((i, _) => i).foldLeft(0)((acc, itemStack) => acc + itemStack.getCount)
 
+  /**
+   * Utility to transfer items from one container to another until the first container satisfies the amount.
+   * @param from
+   * @param to
+   * @param itemQuery
+   * @param amount
+   * @return
+   */
   protected def transferItemsUntil(from: Container, to: Container, itemQuery: String, amount: Int): Boolean = {
     val slotsWithItem = query(from.items)(itemQuery)
-    val currentItemCount = count(to.items)(itemQuery)
-    var remaining = amount - currentItemCount
+    val existingItemCount = count(from.items)(itemQuery)
+    var remaining = existingItemCount - amount
     for {
       (itemStack, index) <- slotsWithItem
       if remaining > 0
@@ -85,63 +85,55 @@ class InventoryMob(entityType: EntityType[FaeEntity], world: Level) extends Mob(
   override def canPickUpLoot = true
 
   override def canTakeItem(itemStack: ItemStack): Boolean =
-    super.canTakeItem(itemStack) || extraInventory.canAddItem(itemStack)
+    extraInventory.canAddItem(itemStack)
 
   override def getPickupReach: Vec3i = InventoryMob.ITEM_PICKUP_REACH
 
   override def pickUpItem(itemEntity: ItemEntity): Unit = super.pickUpItem(itemEntity)
 
   /**
-   * Equip an item into equipment slots or extra inventory.
+   * Equip an item into equipment slots or extra inventory. Overrides default behavior which equips items into equipment slots.
    * @param itemStack The item to equip, is not mutated.
    * @return The itemStack that was equipped.
    */
   override def equipItemIfPossible(itemStack: ItemStack): ItemStack =
-    val result = super.equipItemIfPossible(itemStack)
-    val leftover = itemStack.getCount - result.getCount
-    if leftover > 0 then
-      val leftovers = extraInventory.addItem(itemStack.copyWithCount(leftover))
-      result.grow(leftover - leftovers.getCount)
-    result
+    val leftovers = extraInventory.addItem(itemStack)
+    itemStack.copyWithCount(itemStack.getCount - leftovers.getCount)
 
   override def canReplaceCurrentItem(itemStack: ItemStack, itemStack2: ItemStack): Boolean = true
 
-  def isEquipmentBetterThan(incoming: ItemStack, current: ItemStack): Boolean = super.canReplaceCurrentItem(incoming, current)
+  def isEquipmentBetterThan(incoming: ItemStack, current: ItemStack): Boolean =
+    super.canReplaceCurrentItem(incoming, current)
 
-  override def getContainerSize: Int = this.items.length
+  // TODO: Accessing the equipment slots as part of inventory
+  override def getContainerSize: Int =
+    this.extraInventory.getContainerSize
 
-  override def isEmpty: Boolean = this.items.forall(_.isEmpty)
+  override def isEmpty: Boolean =
+    this.extraInventory.isEmpty
 
-  override def getItem(index: Int): ItemStack = this.items(index)
+  override def getItem(index: Int): ItemStack =
+    this.extraInventory.getItem(index)
 
-  // Remove item using index associated with items def
   override def removeItem(index: Int, amount: Int): ItemStack =
-    var mutableIndex = index
-    if mutableIndex < extraInventory.getContainerSize then
-      return extraInventory.removeItem(index, amount)
-    mutableIndex -= extraInventory.getContainerSize
-    if mutableIndex < List(getHandSlots).length then
-      val existing = getItem(index)
-      setItemSlot(EquipmentSlot.byTypeAndIndex(EquipmentSlot.Type.HAND, mutableIndex), ItemStack.EMPTY)
-      return existing
-    mutableIndex -= List(getHandSlots).length
-    if mutableIndex < List(getArmorSlots).length then
-      val existing = getItem(index)
-      setItemSlot(EquipmentSlot.byTypeAndIndex(EquipmentSlot.Type.ARMOR, mutableIndex), ItemStack.EMPTY)
-      return existing
-    ItemStack.EMPTY
+    this.extraInventory.removeItem(index, amount)
 
-  override def removeItemNoUpdate(i: Int): ItemStack = ???
+  override def removeItemNoUpdate(i: Int): ItemStack =
+    this.extraInventory.removeItemNoUpdate(i)
 
-  override def setItem(i: Int, itemStack: ItemStack): Unit = ???
+  override def setItem(i: Int, itemStack: ItemStack): Unit =
+    this.extraInventory.setItem(i, itemStack)
 
-  override def setChanged(): Unit = ???
+  override def setChanged(): Unit =
+    this.extraInventory.setChanged()
 
-  override def stillValid(player: Player): Boolean = ???
+  override def stillValid(player: Player): Boolean =
+    this.extraInventory.stillValid(player)
 
-  override def clearContent(): Unit = ???
+  override def clearContent(): Unit =
+    this.extraInventory.clearContent()
 }
 
 private object InventoryMob {
-  private val ITEM_PICKUP_REACH = new Vec3i(1, 0, 1)
+  private val ITEM_PICKUP_REACH = new Vec3i(2, 2, 2)
 }

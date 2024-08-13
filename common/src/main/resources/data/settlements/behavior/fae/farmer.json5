@@ -13,7 +13,7 @@
         "satisfy_greedy(item=#villager_plantable_seeds, min=1, max=64)",
         "target_closest_block(block=minecraft:farmland)",
         "go_to_target",
-        "use_item_on_block(item=#villager_plantable_seeds, blockPos=target, side=top)",
+        "place_item_on_block(item=#villager_plantable_seeds, blockPos=target, side=up)",
       ],
     },
     "deposit_until(item=minecraft:wheat, amount=0)",
