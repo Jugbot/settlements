@@ -69,7 +69,6 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
 
   private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
     val maybeBehavior = FaeBehavior.valueOf(name, args)
-    if maybeBehavior.isEmpty then throw new Exception(f"Encountered unknown behavior: $name with $args")
     maybeBehavior.get match {
       case FaeBehavior.unknown() =>
         throw new Exception("Encountered an unknown behavior. There is likely a problem with your config.")

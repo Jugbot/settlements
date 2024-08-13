@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Player
 class InventoryMob(entityType: EntityType[FaeEntity], world: Level) extends Mob(entityType, world), Container {
   private val extraInventory = new SimpleContainer(8)
 
+  // TODO: Move query utils to Container extension
   protected def parseBlockPredicate(blockQuery: String) =
     BlockPredicateArgument(
       CommandBuildContext.simple(this.getServer.registryAccess(), this.getServer.getWorldData.enabledFeatures())
@@ -56,6 +57,7 @@ class InventoryMob(entityType: EntityType[FaeEntity], world: Level) extends Mob(
 
   /**
    * Utility to transfer items from one container to another until the first container satisfies the amount.
+   * TODO: Make this static, add extension method for QOL
    * @param from
    * @param to
    * @param itemQuery
