@@ -50,7 +50,7 @@ object FaeBehavior {
   case class target_closest_block(block: String) extends FaeBehavior
   case class has_space_for_target_produce() extends FaeBehavior
   case class break_block(blockPos: String) extends FaeBehavior
-  case class place_item_on_block(item: String, blockPos: String, side: String) extends FaeBehavior
+  case class place_item_at_target(item: String, blockPos: String) extends FaeBehavior
   case class holds_at_least(item: String, amount: String) extends FaeBehavior
   case class holds_at_most(item: String, amount: String) extends FaeBehavior
   case class target_nearest_stockpile_with(item: String) extends FaeBehavior
@@ -59,6 +59,8 @@ object FaeBehavior {
   case class holds(item: String, min: String, max: String) extends FaeBehavior
   case class obtain_job() extends FaeBehavior
   case class equals_literal(key: String, value: String) extends FaeBehavior
+  case class nav_ended() extends FaeBehavior
+  case class reset_nav() extends FaeBehavior
 
   def valueOf(name: String, args: Map[String, String]): Option[FaeBehavior] =
     io.github.jugbot.meta.valueOf[FaeBehavior](name, args)

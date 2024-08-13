@@ -1,15 +1,13 @@
 package io.github.jugbot.entity
 
 import com.google.common.base.Suppliers
-import com.mojang.brigadier.StringReader
-import io.github.jugbot
-import io.github.jugbot.ai.*
 import io.github.jugbot.ai.tree.{FaeBehavior, FaeBehaviorTree}
-import net.minecraft.commands.CommandBuildContext
-import net.minecraft.commands.arguments.blocks.BlockPredicateArgument
-import net.minecraft.commands.arguments.item.ItemPredicateArgument
-import net.minecraft.core.{BlockPos, Direction}
+import io.github.jugbot.ai.*
+import io.github.jugbot.extension.Container.*
+import net.minecraft.ChatFormatting
+import net.minecraft.core.BlockPos
 import net.minecraft.nbt.{CompoundTag, NbtUtils}
+import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.BlockTags
@@ -17,7 +15,7 @@ import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.*
 import net.minecraft.world.entity.ai.attributes.{AttributeSupplier, Attributes}
 import net.minecraft.world.entity.ai.village.poi.{PoiManager, PoiTypes}
-import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.{BlockItem, ItemStack}
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.BedBlock
@@ -26,17 +24,12 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.pattern.BlockInWorld
 import net.minecraft.world.level.storage.loot.LootParams
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams
-import net.minecraft.world.phys.BlockHitResult
-import net.minecraft.world.{Container, InteractionHand, SimpleContainer}
+import net.minecraft.world.{InteractionHand, InteractionResult}
 
 import java.util.function.Supplier
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.OptionConverters.RichOptional
-import io.github.jugbot.extension.Container.*
-import net.minecraft.world.item.context.UseOnContext
-import net.minecraft.world.level.gameevent.GameEvent
-import net.minecraft.world.level.gameevent.GameEvent.Context
 
 class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends InventoryMob(entityType, world) {
 
@@ -46,16 +39,18 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
 
   override def canPickUpLoot = true
 
+  private var behaviorLog = Seq.empty[BehaviorLog]
   override def tick(): Unit = {
     super.tick()
     if this.level().isClientSide then {
       return
     }
-    runModules(
+    behaviorLog = runModules(
       FaeBehaviorTree.map.getOrElse("root", FaeBehaviorTree.fallback),
-      this.performBehavior,
+      this.debugWrapper,
       FaeBehaviorTree.map
     )
+    ()
   }
 
   private object SPECIAL_KEYS {
@@ -65,12 +60,17 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
 
   private val blackboard = mutable.Map.empty[String, Any]
 
+  private def debugWrapper(name: String, args: Map[String, String]): BehaviorStatus =
+    val profiler = this.level().getProfiler
+    profiler.push(name)
+    val result = performBehavior(name, args)
+    profiler.pop()
+    result
+
   private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
     val maybeBehavior = FaeBehavior.valueOf(name, args)
     if maybeBehavior.isEmpty then throw new Exception(f"Encountered unknown behavior: $name with $args")
-    val profiler = this.level().getProfiler
-    profiler.push(name)
-    val status = maybeBehavior.get match {
+    maybeBehavior.get match {
       case FaeBehavior.unknown() =>
         throw new Exception("Encountered an unknown behavior. There is likely a problem with your config.")
       case FaeBehavior.unimplemented() =>
@@ -119,24 +119,31 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
       case FaeBehavior.is_at_location(key) =>
         blackboard.get(key) match {
           case Some(blockPos: BlockPos)
-              if this.getY + 0.4 > blockPos.getY.toDouble && blockPos.closerToCenterThan(this.position, 1.5) =>
+              if (this.getNavigation.isDone && this.getNavigation.getTargetPos == blockPos) || (this.getY + 0.4 > blockPos.getY.toDouble && blockPos
+                .closerToCenterThan(this.position, 1.5)) =>
             BehaviorSuccess
           case _ => BehaviorFailure
         }
+      case FaeBehavior.nav_ended() =>
+        if this.getNavigation.isDone then BehaviorSuccess else BehaviorFailure
+      case FaeBehavior.reset_nav() =>
+        this.getNavigation.stop()
+        BehaviorSuccess
       case FaeBehavior.has_nav_path_to(key) =>
+        val currentTarget = this.getNavigation.getTargetPos
         blackboard.get(key) match {
           case Some(blockPos: BlockPos)
-              if this.getNavigation.getTargetPos != null && blockPos.distManhattan(
-                this.getNavigation.getTargetPos
-              ) <= 1 && this.getNavigation.isInProgress =>
+              if currentTarget != null && blockPos.distManhattan(currentTarget) <= FaeEntity.NAVIGATION_PROXIMITY =>
             BehaviorSuccess
           case _ => BehaviorFailure
         }
       case FaeBehavior.create_nav_path_to(key) =>
         blackboard.get(key) match {
           case Some(blockPos: BlockPos) =>
-            val path = this.getNavigation.createPath(blockPos, 1)
-            if this.getNavigation.moveTo(path, 1) then BehaviorSuccess else BehaviorFailure
+            this.getNavigation.stop()
+            if this.getNavigation.moveTo(this.getNavigation.createPath(blockPos, FaeEntity.NAVIGATION_PROXIMITY), 1)
+            then BehaviorSuccess
+            else BehaviorFailure
           case _ => BehaviorFailure
         }
       case FaeBehavior.current_path_unobstructed() =>
@@ -198,7 +205,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
           case _ =>
             BehaviorFailure
         }
-      case FaeBehavior.place_item_on_block(itemQuery, blockPos, side) =>
+      case FaeBehavior.place_item_at_target(itemQuery, blockPos) =>
         // TODO: Investigate making item usage more generic and based on player behavior Block.use or Item.useOn
         blackboard.get(blockPos) match {
           case Some(blockPos: BlockPos) if this.equipFromInventory(itemQuery, EquipmentSlot.MAINHAND) =>
@@ -209,17 +216,15 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
                 case blockItem: BlockItem =>
                   // based on HarvestFarmland.class
                   val blockState = blockItem.getBlock.defaultBlockState()
-                  val relativePos = blockPos.relative(Direction.byName(side))
-                  this.level.setBlockAndUpdate(relativePos, blockState)
+                  this.level.setBlockAndUpdate(blockPos, blockState)
 //                  this.level.asInstanceOf[ServerLevel].gameEvent(GameEvent.BLOCK_PLACE, relativePos, GameEvent.Context.of (this, blockState) )
                   // TODO: PLay sound?
                   itemStack.shrink(1)
-                  if (itemStack.isEmpty) this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY)
+                  if itemStack.isEmpty then this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY)
                   BehaviorSuccess
                 case _ => BehaviorFailure
               }
-            else
-              BehaviorFailure
+            else BehaviorFailure
           case _ =>
             BehaviorFailure
         }
@@ -281,8 +286,20 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
           case _                     => BehaviorFailure
         }
     }
-    profiler.pop()
-    status
+
+  override def mobInteract(player: Player, interactionHand: InteractionHand): InteractionResult = {
+    if player.isCrouching then {
+      player.sendSystemMessage(Component.literal("Behavior Log:").withStyle(ChatFormatting.BOLD))
+      behaviorLog.foreach { log =>
+        val basicMessage = Component.literal(log.toString())
+        val styledMessage =
+          if log.isModule then basicMessage.withStyle(ChatFormatting.DARK_BLUE, ChatFormatting.BOLD)
+          else basicMessage.withStyle(ChatFormatting.BLUE)
+        player.sendSystemMessage(styledMessage)
+      }
+    }
+    super.mobInteract(player, interactionHand)
+  }
 
   override def die(damageSource: DamageSource): Unit = {
     super.die(damageSource)
@@ -321,11 +338,12 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
       )
     }
   }
-
 }
 
 object FaeEntity {
   private val BED_POSITION_NBT_KEY = "bedPosition"
+
+  private val NAVIGATION_PROXIMITY = 1
 
   final val TYPE: Supplier[EntityType[FaeEntity]] = Suppliers.memoize(() =>
     EntityType.Builder

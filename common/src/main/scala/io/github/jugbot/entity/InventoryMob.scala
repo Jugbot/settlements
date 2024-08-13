@@ -13,7 +13,6 @@ import net.minecraft.world.level.Level
 import io.github.jugbot.extension.Container.*
 import net.minecraft.world.entity.player.Player
 
-
 class InventoryMob(entityType: EntityType[FaeEntity], world: Level) extends Mob(entityType, world), Container {
   private val extraInventory = new SimpleContainer(8)
 

@@ -2,10 +2,16 @@ package io.github.jugbot.ai
 
 import io.github.jugbot.Mod.LOGGER
 
+import scala.collection.mutable
+
 type Parameters = Map[String, String]
 type ParameterizedAction = (String, Parameters)
 type ParameterizedNode = Node[ParameterizedAction]
 type References = Map[String, ParameterizedNode]
+
+case class BehaviorLog(name: String, args: Map[String, String], result: BehaviorStatus, isModule: Boolean) {
+  override def toString: String = f"$name($args) => $result"
+}
 
 /**
  * Gets the state from a behavior tree, using a graph of subtrees which reference each other
@@ -16,7 +22,8 @@ type References = Map[String, ParameterizedNode]
 def runModules(root: ParameterizedNode,
                perform: Perform[ParameterizedAction],
                references: References = Map.empty
-): Unit = {
+): Seq[BehaviorLog] = {
+  val log = mutable.Buffer.empty[BehaviorLog]
   def cb(name: String, parameters: Parameters, context: Parameters): BehaviorStatus = {
     val hydratedParams = parameters.map { (key, value) =>
       value match {
@@ -24,13 +31,18 @@ def runModules(root: ParameterizedNode,
         case _         => (key, value)
       }
     }
-    references.get(name) match {
+    val index = log.size
+    log.append(null)
+    val status = references.get(name) match {
       case Some(n) => run(n, cb(_, _, hydratedParams))
       case None    => perform(name, hydratedParams)
     }
+    log.update(index, BehaviorLog(name, hydratedParams, status, references.contains(name)))
+    status
   }
 
   run(root, cb(_, _, Map.empty))
+  log.toSeq
 }
 
 type SerializerTest = (name: String, args: Map[String, String]) => Option[Any]
