@@ -6,6 +6,7 @@
         if: "holds_at_least(item=$item, amount=$min)",
         then: {
           sequence: [
+            // TODO: Account for partial stacks of $item
             "target_nearest_stockpile_with(item=air)",
             "go_to_target",
             "transfer_item_to_target_until(item=$item, amount=$max)",

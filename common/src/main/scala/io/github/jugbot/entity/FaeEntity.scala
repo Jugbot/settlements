@@ -78,6 +78,12 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         throw new Exception("Encountered an unknown behavior. There is likely a problem with your config.")
       case FaeBehavior.unimplemented() =>
         BehaviorSuccess
+      case FaeBehavior.failure() =>
+        BehaviorFailure
+      case FaeBehavior.success() =>
+        BehaviorSuccess
+      case FaeBehavior.running() =>
+        BehaviorRunning
       case FaeBehavior.is_tired() =>
         if this.level().isNight then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.has(key) =>
@@ -131,6 +137,10 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
       case FaeBehavior.reset_nav() =>
         this.getNavigation.stop()
         BehaviorSuccess
+      case FaeBehavior.resolve_nav() =>
+        val success = this.getNavigation.getPath.canReach
+        this.getNavigation.stop()
+        if success then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.has_nav_path_to(key) =>
         val currentTarget = Option(this.getNavigation.getPath).map(path => path.getTarget)
         (blackboard.get(key), currentTarget) match {

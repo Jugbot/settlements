@@ -33,6 +33,11 @@ object FaeBehavior {
   /** A placeholder behavior that always is successful */
   case class unimplemented() extends FaeBehavior
 
+  /** Hardcoded statuses */
+  case class failure() extends FaeBehavior
+  case class success() extends FaeBehavior
+  case class running() extends FaeBehavior
+
   case class set(key: String, value: String) extends FaeBehavior
   case class sleep() extends FaeBehavior
   case class is_tired() extends FaeBehavior
@@ -61,6 +66,7 @@ object FaeBehavior {
   case class equals_literal(key: String, value: String) extends FaeBehavior
   case class nav_ended() extends FaeBehavior
   case class reset_nav() extends FaeBehavior
+  case class resolve_nav() extends FaeBehavior
 
   def valueOf(name: String, args: Map[String, String]): Option[FaeBehavior] =
     io.github.jugbot.meta.valueOf[FaeBehavior](name, args)

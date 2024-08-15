@@ -2,30 +2,28 @@
   selector: [
     // If at destination, skip!
     "is_at_location(target=$target)",
-    // If currently on a path, continue or reset
     {
-      sequence: [
-        "has_nav_path_to(target=$target)",
-        {
-          selector: [
-            { 
-              sequence: [
-                "nav_ended", 
-                "reset_nav"
-              ] 
-            },
+      condition: {
+        if: "has_nav_path_to(target=$target)",
+        // If currently on a path, continue or reset
+        then: {
+          condition: {
+            if: "nav_ended",
+            // Ends navigation. If navigation has not reached the target then it failed.
+            then: "resolve_nav",
+            // If navigation to target has not ended, continue moving along path
+            else: "move_along_current_path",
+          },
+        },
+        // Else, create a path
+        else: {
+          sequence: [
+            // TODO: Show feedback if no path can be found
+            "create_nav_path_to(target=$target)",
             "move_along_current_path",
           ],
         },
-      ],
-    },
-    // Create a path
-    {
-      sequence: [
-        // TODO: Show feedback if no path can be found
-        "create_nav_path_to(target=$target)",
-        "move_along_current_path",
-      ],
+      },
     },
   ],
 }

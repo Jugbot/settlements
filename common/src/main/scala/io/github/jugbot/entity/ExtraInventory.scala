@@ -2,11 +2,12 @@ package io.github.jugbot.entity
 
 import io.github.jugbot.extension.Container.Query.*
 import net.minecraft.core.Vec3i
+import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.{EquipmentSlot, Mob}
 import net.minecraft.world.item.ItemStack
-import net.minecraft.world.{Container, SimpleContainer}
+import net.minecraft.world.{Container, Containers, SimpleContainer}
 
 trait ExtraInventory extends Mob, Container {
   private val extraInventory = new SimpleContainer(8)
@@ -27,6 +28,11 @@ trait ExtraInventory extends Mob, Container {
       case None => false
     }
   }
+
+  override def dropAllDeathLoot(damageSource: DamageSource): Unit =
+    Containers.dropContents(level, this, this.extraInventory)
+    this.extraInventory.removeAllItems()
+    super.dropAllDeathLoot(damageSource)
 
   override def canPickUpLoot = true
 
