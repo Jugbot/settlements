@@ -1,5 +1,8 @@
 {
   selector: [
+    // If at destination, skip!
+    "is_at_location(target=$target)",
+    // If currently on a path, continue or reset
     {
       sequence: [
         "has_nav_path_to(target=$target)",
@@ -16,10 +19,11 @@
         },
       ],
     },
+    // Create a path
     {
       sequence: [
+        // TODO: Show feedback if no path can be found
         "create_nav_path_to(target=$target)",
-        //        "current_path_unobstructed",
         "move_along_current_path",
       ],
     },

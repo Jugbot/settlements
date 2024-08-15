@@ -5,7 +5,7 @@
         // TODO: If the settler has too many seeds, it should deposit till less than 64 to avoid repathing when getting a single item over 64
         // Could also replace greedy with an argument for ideal target amount
         // satisfy(item=#,min=1,max=64,ideal=32)
-        "satisfy_greedy(item=#villager_plantable_seeds, min=1, max=64)",
+        "satisfy(item=#villager_plantable_seeds, min=1, max=64)",
         "target_closest_block(block=minecraft:wheat[age=7])",
         "has_space_for_target_produce",
         "go_to_target",

@@ -4,8 +4,10 @@ import com.google.common.base.Suppliers
 import io.github.jugbot.ai.tree.{FaeBehavior, FaeBehaviorTree}
 import io.github.jugbot.ai.*
 import io.github.jugbot.extension.Container.*
+import io.github.jugbot.extension.Container.Query.*
+import io.github.jugbot.util.{blockPredicate, itemPredicate, parseBlockQuery}
 import net.minecraft.ChatFormatting
-import net.minecraft.core.BlockPos
+import net.minecraft.core.{BlockPos, Position}
 import net.minecraft.nbt.{CompoundTag, NbtUtils}
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.DebugPackets
@@ -31,7 +33,9 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.OptionConverters.RichOptional
 
-class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends InventoryMob(entityType, world) {
+class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
+    extends Mob(entityType: EntityType[FaeEntity], world: Level)
+    with ExtraInventory {
 
   override def isPushable: Boolean = false
 
@@ -118,8 +122,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
       case FaeBehavior.is_at_location(key) =>
         blackboard.get(key) match {
           case Some(blockPos: BlockPos)
-              if (this.getNavigation.isDone && this.getNavigation.getTargetPos == blockPos) || (this.getY + 0.4 > blockPos.getY.toDouble && blockPos
-                .closerToCenterThan(this.position, 1.5)) =>
+              if blockPos.closerToCenterThan(this.position, FaeEntity.NAVIGATION_PROXIMITY + 1) =>
             BehaviorSuccess
           case _ => BehaviorFailure
         }
@@ -129,10 +132,10 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
         this.getNavigation.stop()
         BehaviorSuccess
       case FaeBehavior.has_nav_path_to(key) =>
-        val currentTarget = this.getNavigation.getTargetPos
-        blackboard.get(key) match {
-          case Some(blockPos: BlockPos)
-              if currentTarget != null && blockPos.distManhattan(currentTarget) <= FaeEntity.NAVIGATION_PROXIMITY =>
+        val currentTarget = Option(this.getNavigation.getPath).map(path => path.getTarget)
+        (blackboard.get(key), currentTarget) match {
+          case (Some(posA: BlockPos), Some(posB: BlockPos))
+              if posA.distManhattan(posB) <= FaeEntity.NAVIGATION_PROXIMITY =>
             BehaviorSuccess
           case _ => BehaviorFailure
         }
@@ -140,7 +143,8 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
         blackboard.get(key) match {
           case Some(blockPos: BlockPos) =>
             this.getNavigation.stop()
-            if this.getNavigation.moveTo(this.getNavigation.createPath(blockPos, FaeEntity.NAVIGATION_PROXIMITY), 1)
+            val path = this.getNavigation.createPath(blockPos, FaeEntity.NAVIGATION_PROXIMITY)
+            if path != null && path.canReach && this.getNavigation.moveTo(path, 1)
             then BehaviorSuccess
             else BehaviorFailure
           case _ => BehaviorFailure
@@ -161,13 +165,13 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
         this.stopSleeping()
         BehaviorSuccess
       case FaeBehavior.target_closest_block(blockQuery) =>
-        val block = parseBlockPredicate(blockQuery)
+        val predicate = blockPredicate(blockQuery)
         val maybeClosest = BlockPos
           .findClosestMatch(this.blockPosition,
                             12,
                             12,
                             bp =>
-                              block.test(
+                              predicate(
                                 BlockInWorld(this.level(), bp, false)
                               )
           )
@@ -228,11 +232,11 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
             BehaviorFailure
         }
       case FaeBehavior.holds_at_least(itemQuery, amount) =>
-        if count(items)(itemQuery) >= amount.toInt then BehaviorSuccess else BehaviorFailure
+        if this.count(itemQuery) >= amount.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.holds_at_most(itemQuery, amount) =>
-        if count(items)(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
+        if this.count(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.target_nearest_stockpile_with(itemQuery) =>
-        val itemTester = parseItemPredicate(itemQuery)
+        val predicate = itemPredicate(itemQuery)
         val maybeClosest = BlockPos
           .findClosestMatch(this.blockPosition,
                             12,
@@ -243,7 +247,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
         maybeClosest match {
           case Some(blockPos) =>
             val chest = this.level.getBlockEntity(blockPos, BlockEntityType.CHEST).get
-            chest.items.count(itemStack => itemTester.test(itemStack)) match {
+            chest.items.count(predicate) match {
               case 0 => BehaviorFailure
               case _ =>
                 blackboard.update(SPECIAL_KEYS.TARGET, blockPos)
@@ -256,7 +260,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
           this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala
         } match
           case Some(chest: ChestBlockEntity) =>
-            val success = transferItemsUntil(chest, this, itemQuery, amount.toInt)
+            val success = chest.transferItemsUntilTargetHas(this, itemQuery, amount.toInt)
             if success then BehaviorSuccess else BehaviorFailure
           case None => BehaviorFailure
       case FaeBehavior.transfer_item_to_target_until(itemQuery, amount) =>
@@ -264,7 +268,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
           this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala
         } match
           case Some(chest: ChestBlockEntity) =>
-            val success = transferItemsUntil(this, chest, itemQuery, amount.toInt)
+            val success = this.transferItemsUntilSelfHas(chest, itemQuery, amount.toInt)
             if success then BehaviorSuccess else BehaviorFailure
           case None => BehaviorFailure
       case FaeBehavior.set(to, from) =>
@@ -274,7 +278,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level) extends Invento
         }
         BehaviorSuccess
       case FaeBehavior.holds(itemQuery, min, max) =>
-        val count = this.count(items)(itemQuery)
+        val count = this.count(itemQuery)
         if count >= min.toInt && count <= max.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.obtain_job() =>
         blackboard.update("job", "farmer")
