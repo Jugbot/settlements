@@ -1,5 +1,6 @@
 package io.github.jugbot.extension
 
+import io.github.jugbot.util.itemPredicate
 import net.minecraft.world.Container
 import net.minecraft.world.item.ItemStack
 
@@ -7,7 +8,7 @@ import scala.util.boundary
 
 object Container {
   extension (inventory: Container) {
-    def items: IndexedSeq[ItemStack] = for {
+    def items: Seq[ItemStack] = for {
       i <- 0 until inventory.getContainerSize
     } yield inventory.getItem(i)
 
@@ -56,6 +57,63 @@ object Container {
         itemStack.shrink(j)
         inventory.setChanged()
       }
+    }
+  }
+
+  object Query {
+    type SlotIndex = Int
+    type ItemSlot = (ItemStack, SlotIndex)
+
+    extension (inventory: Container) {
+      def query(itemQuery: String): Seq[ItemSlot] = {
+        val predicate = itemPredicate(itemQuery)
+        inventory.items.zipWithIndex.filter((itemStack, _) => predicate(itemStack))
+      }
+
+      def count(itemQuery: String): Int =
+        query(itemQuery).map((i, _) => i).foldLeft(0)((acc, itemStack) => acc + itemStack.getCount)
+
+      /**
+       * Utility to transfer items from one container to another.
+       *
+       * @param from      The container to transfer items from.
+       * @param to        The container to transfer items to.
+       * @param itemQuery The query for items that will be transferred.
+       * @param amount    The amount of items to be transferred.
+       * @return
+       */
+      private def transferItemsUntil(from: Container, to: Container, itemQuery: String, amount: Int): Boolean = {
+        val slotsWithItem = from.query(itemQuery)
+        var remaining = amount
+        for {
+          (itemStack, index) <- slotsWithItem
+          if remaining > 0
+        } {
+          val toTransfer = Math.min(Math.max(0, remaining), itemStack.getCount)
+          val newStack = itemStack.copy()
+          newStack.setCount(toTransfer)
+          val remainingStack = to.addItem(newStack)
+          from.setItem(index, remainingStack)
+          val transferredAmount = toTransfer - remainingStack.getCount
+          remaining -= transferredAmount
+        }
+        remaining <= 0
+      }
+
+      def transferItemsUntilTargetHas(target: Container, itemQuery: String, amount: Int): Boolean =
+        val existingItemCount = target.count(itemQuery)
+        transferItemsUntil(inventory, target, itemQuery, amount - existingItemCount)
+
+      /**
+       * Transfer items from this inventory to another container until the queried items are at or below the amount.
+       * @param container The container to transfer items to.
+       * @param itemQuery The query to filter items in this inventory.
+       * @param amount The amount of items in the container that will cease transfer.
+       * @return
+       */
+      def transferItemsUntilSelfHas(target: Container, itemQuery: String, amount: Int): Boolean =
+        val existingItemCount = inventory.count(itemQuery)
+        transferItemsUntil(inventory, target, itemQuery, existingItemCount - amount)
     }
   }
 }
