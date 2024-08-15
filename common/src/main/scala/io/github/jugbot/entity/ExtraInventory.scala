@@ -4,13 +4,14 @@ import io.github.jugbot.extension.Container.Query.*
 import net.minecraft.core.Vec3i
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.item.ItemEntity
-import net.minecraft.world.entity.player.Player
+import net.minecraft.world.entity.player.{Inventory, Player}
 import net.minecraft.world.entity.{EquipmentSlot, Mob}
+import net.minecraft.world.inventory.{AbstractContainerMenu, ChestMenu, HopperMenu, MenuType}
 import net.minecraft.world.item.ItemStack
-import net.minecraft.world.{Container, Containers, SimpleContainer}
+import net.minecraft.world.{Container, Containers, InteractionHand, InteractionResult, MenuProvider, SimpleContainer}
 
-trait ExtraInventory extends Mob, Container {
-  private val extraInventory = new SimpleContainer(8)
+trait ExtraInventory extends Mob, Container, MenuProvider {
+  private val extraInventory = new SimpleContainer(9)
 
   /**
    * Moves an item from the extra inventory to the equipment slot if possible.
@@ -42,6 +43,13 @@ trait ExtraInventory extends Mob, Container {
   override def getPickupReach: Vec3i = ExtraInventory.ITEM_PICKUP_REACH
 
   override def pickUpItem(itemEntity: ItemEntity): Unit = super.pickUpItem(itemEntity)
+
+  override def mobInteract(player: Player, interactionHand: InteractionHand): InteractionResult =
+    player.openMenu(this)
+    if !player.level.isClientSide then InteractionResult.CONSUME else InteractionResult.SUCCESS
+
+  override def createMenu(i: SlotIndex, inventory: Inventory, player: Player): AbstractContainerMenu =
+    new ChestMenu(MenuType.GENERIC_9x1, i, inventory, this, 1);
 
   /**
    * Equip an item into equipment slots or extra inventory. Overrides default behavior which equips items into equipment slots.

@@ -301,7 +301,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     }
 
   override def mobInteract(player: Player, interactionHand: InteractionHand): InteractionResult = {
-    if player.isCrouching then {
+    if player.isCrouching && !player.isLocalPlayer then {
       player.sendSystemMessage(Component.literal("Behavior Log:").withStyle(ChatFormatting.BOLD))
       behaviorLog.foreach { log =>
         val basicMessage = Component.literal(log.toString())
