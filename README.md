@@ -1,3 +1,12 @@
+### Description
+
+Customizable Behavior Tree driven AI that can perform tasks for you!
+Eventually the goal is to have builders that will build required structures (homes, bakery, smithy, etc...) so that settlements will feel alive and dynamic.
+
+The Roadmap is available in the wiki: https://github.com/Jugbot/settlements/wiki/Release-Plans
+
+https://github.com/user-attachments/assets/3dff015d-d5cd-4203-bbaf-beb3fc99f874
+
 ### Setup
 
 0. Install JDK 21
