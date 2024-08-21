@@ -22,7 +22,7 @@ trait ExtraInventory extends Mob, Container, MenuProvider {
   protected def equipFromInventory(itemQuery: String, slot: EquipmentSlot) = {
     val maybeItem = this.query(itemQuery).headOption
     maybeItem match {
-      case Some((itemStack, index)) =>
+      case Some(ItemSlot(itemStack, index)) =>
         setItem(index, getItemBySlot(slot))
         setItemSlot(slot, itemStack)
         true

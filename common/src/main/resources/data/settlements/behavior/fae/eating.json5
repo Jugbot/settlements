@@ -1,0 +1,10 @@
+{
+  condition: {
+    if: "is_hungry",
+    then: { sequence: [
+      "satisfy(item=#c:foods, min=1, max=64)",
+      "eat_food"
+    ] },
+    else: "success",
+  },
+}

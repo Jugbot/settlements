@@ -1,17 +1,18 @@
 package io.github.jugbot.entity
 
 import com.google.common.base.Suppliers
-import io.github.jugbot.ai.tree.{FaeBehavior, FaeBehaviorTree}
 import io.github.jugbot.ai.*
+import io.github.jugbot.ai.tree.{FaeBehavior, FaeBehaviorTree}
 import io.github.jugbot.extension.Container.*
 import io.github.jugbot.extension.Container.Query.*
-import io.github.jugbot.util.{blockPredicate, itemPredicate, parseBlockQuery}
+import io.github.jugbot.util.{blockPredicate, itemPredicate}
 import net.minecraft.ChatFormatting
-import net.minecraft.core.{BlockPos, Position}
+import net.minecraft.core.BlockPos
 import net.minecraft.nbt.{CompoundTag, NbtUtils}
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.sounds.{SoundEvents, SoundSource}
 import net.minecraft.tags.BlockTags
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.*
@@ -32,10 +33,12 @@ import java.util.function.Supplier
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.OptionConverters.RichOptional
+import net.minecraft.world.level.gameevent.GameEvent
 
 class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     extends Mob(entityType: EntityType[FaeEntity], world: Level)
-    with ExtraInventory {
+    with ExtraInventory
+    with Hunger {
 
   override def isPushable: Boolean = false
 
@@ -75,7 +78,9 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     val maybeBehavior = FaeBehavior.valueOf(name, args)
     maybeBehavior.get match {
       case FaeBehavior.unknown() =>
-        throw new Exception("Encountered an unknown behavior. There is likely a problem with your config.")
+        throw new Exception(
+          "Encountered an unknown behavior. There is likely a problem with your config. See warnings above."
+        )
       case FaeBehavior.unimplemented() =>
         BehaviorSuccess
       case FaeBehavior.failure() =>
@@ -230,8 +235,17 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
                   // based on HarvestFarmland.class
                   val blockState = blockItem.getBlock.defaultBlockState()
                   this.level.setBlockAndUpdate(blockPos, blockState)
-//                  this.level.asInstanceOf[ServerLevel].gameEvent(GameEvent.BLOCK_PLACE, relativePos, GameEvent.Context.of (this, blockState) )
-                  // TODO: PLay sound?
+                  val serverLevel = this.level.asInstanceOf[ServerLevel]
+                  serverLevel.gameEvent(GameEvent.BLOCK_PLACE, blockPos, GameEvent.Context.of(this, blockState))
+                  serverLevel.playSound(null.asInstanceOf[Player],
+                                        blockPos.getX.toDouble,
+                                        blockPos.getY.toDouble,
+                                        blockPos.getZ.toDouble,
+                                        SoundEvents.CROP_PLANTED,
+                                        SoundSource.BLOCKS,
+                                        1.0f,
+                                        1.0f
+                  )
                   itemStack.shrink(1)
                   if itemStack.isEmpty then this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY)
                   BehaviorSuccess
@@ -298,6 +312,25 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
           case Some(v) if v == value => BehaviorSuccess
           case _                     => BehaviorFailure
         }
+      case FaeBehavior.is_hungry() =>
+        if this.foodData.needsFood then BehaviorSuccess else BehaviorFailure
+      case FaeBehavior.eat_food() =>
+        this.queryFirst("#c:foods") match {
+          case Some(ItemSlot(itemStack, slot)) =>
+            val newStack = this.foodData.eat(itemStack)
+            this.setItem(slot, newStack)
+            BehaviorSuccess
+          case None => BehaviorFailure
+        }
+      case FaeBehavior.add(key, value) =>
+        blackboard.get(key) match {
+          case Some(acc: mutable.Set[?]) =>
+            acc.asInstanceOf[mutable.Set[String]].add(value)
+          case _ =>
+            val t = mutable.Set(value)
+            blackboard.update(key, t)
+        }
+        BehaviorSuccess
     }
 
   override def mobInteract(player: Player, interactionHand: InteractionHand): InteractionResult = {
@@ -322,13 +355,15 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     val serverLevel = this.level().asInstanceOf[ServerLevel]
 
     val poiManager: PoiManager = serverLevel.getPoiManager
-    blackboard.get(SPECIAL_KEYS.BED_POSITION).foreach { case Some(blockPos: BlockPos) =>
-      val optional = poiManager.getType(blockPos)
-      if optional.isPresent then {
-        poiManager.release(blockPos)
-        // TODO: Copy-pasta, what is this?
-        DebugPackets.sendPoiTicketCountPacket(serverLevel, blockPos)
-      }
+    blackboard.get(SPECIAL_KEYS.BED_POSITION).foreach {
+      case Some(blockPos: BlockPos) =>
+        val optional = poiManager.getType(blockPos)
+        if optional.isPresent then {
+          poiManager.release(blockPos)
+          // TODO: Copy-pasta, what is this?
+          DebugPackets.sendPoiTicketCountPacket(serverLevel, blockPos)
+        }
+      case _ => ()
     }
   }
 

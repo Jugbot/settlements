@@ -62,16 +62,24 @@ object Container {
 
   object Query {
     type SlotIndex = Int
-    type ItemSlot = (ItemStack, SlotIndex)
+    case class ItemSlot(itemStack: ItemStack, slot: SlotIndex)
 
     extension (inventory: Container) {
       def query(itemQuery: String): Seq[ItemSlot] = {
         val predicate = itemPredicate(itemQuery)
-        inventory.items.zipWithIndex.filter((itemStack, _) => predicate(itemStack))
+        inventory.items.zipWithIndex.filter((itemStack, _) => predicate(itemStack)).map(ItemSlot(_, _))
+      }
+
+      def find(predicate: Function[ItemSlot, Boolean]): Option[ItemSlot] =
+        inventory.items.zipWithIndex.map(ItemSlot(_, _)).find(predicate)
+
+      def queryFirst(itemQuery: String): Option[ItemSlot] = {
+        val predicate = itemPredicate(itemQuery)
+        find((itemSlot: ItemSlot) => predicate(itemSlot.itemStack))
       }
 
       def count(itemQuery: String): Int =
-        query(itemQuery).map((i, _) => i).foldLeft(0)((acc, itemStack) => acc + itemStack.getCount)
+        query(itemQuery).map(_.itemStack).foldLeft(0)((acc, itemStack) => acc + itemStack.getCount)
 
       /**
        * Utility to transfer items from one container to another.
@@ -86,7 +94,7 @@ object Container {
         val slotsWithItem = from.query(itemQuery)
         var remaining = amount
         for {
-          (itemStack, index) <- slotsWithItem
+          ItemSlot(itemStack, index) <- slotsWithItem
           if remaining > 0
         } {
           val toTransfer = Math.min(Math.max(0, remaining), itemStack.getCount)

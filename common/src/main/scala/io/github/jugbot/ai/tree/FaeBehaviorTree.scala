@@ -27,21 +27,24 @@ sealed trait FaeBehavior
 
 object FaeBehavior {
 
-  /** A default value for when a FaeBehavior cannot be properly resolved */
+  /// A default value for when a FaeBehavior cannot be properly resolved
   case class unknown() extends FaeBehavior
 
-  /** A placeholder behavior that always is successful */
+  /// A placeholder behavior that always is successful
   case class unimplemented() extends FaeBehavior
 
-  /** Hardcoded statuses */
+  /// Hardcoded statuses
   case class failure() extends FaeBehavior
   case class success() extends FaeBehavior
   case class running() extends FaeBehavior
 
+  /// Blackboard functions
   case class set(key: String, value: String) extends FaeBehavior
+  case class has(value: String) extends FaeBehavior
+  case class add(key: String, value: String) extends FaeBehavior
+
   case class sleep() extends FaeBehavior
   case class is_tired() extends FaeBehavior
-  case class has(value: String) extends FaeBehavior
   case class claim_bed() extends FaeBehavior
   case class bed_is_valid() extends FaeBehavior
   case class is_at_location(target: String) extends FaeBehavior
@@ -67,6 +70,8 @@ object FaeBehavior {
   case class nav_ended() extends FaeBehavior
   case class reset_nav() extends FaeBehavior
   case class resolve_nav() extends FaeBehavior
+  case class is_hungry() extends FaeBehavior
+  case class eat_food() extends FaeBehavior
 
   def valueOf(name: String, args: Map[String, String]): Option[FaeBehavior] =
     io.github.jugbot.meta.valueOf[FaeBehavior](name, args)

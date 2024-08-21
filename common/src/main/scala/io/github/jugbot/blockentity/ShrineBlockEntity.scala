@@ -2,25 +2,20 @@ package io.github.jugbot.blockentity
 
 import com.google.common.base.Suppliers
 import io.github.jugbot.block.ShrineBlock
-import net.minecraft.BlockUtil
-import net.minecraft.core.{BlockPos, UUIDUtil}
-import net.minecraft.nbt.{CompoundTag, IntArrayTag, ListTag, NbtUtils, Tag}
-import net.minecraft.network.chat.Component
+import net.minecraft.core.BlockPos
+import net.minecraft.nbt.{CompoundTag, ListTag, NbtUtils, Tag}
 import net.minecraft.tags.{BlockTags, TagKey}
-import net.minecraft.world.MenuProvider
-import net.minecraft.world.entity.player.{Inventory, Player}
-import net.minecraft.world.inventory.{AbstractContainerMenu, CraftingMenu}
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.block.{Block, Blocks}
 import net.minecraft.world.level.block.entity.{BlockEntity, BlockEntityType}
 import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.level.block.{Block, Blocks}
 import net.minecraft.world.phys.AABB
 
 import java.util.UUID
-import scala.jdk.StreamConverters.*
 import java.util.function.Supplier
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
+import scala.jdk.StreamConverters.*
 
 case class BlockStateRequirement(state: TagKey[Block] | Block | BlockState, total: Int, satisfied: Int = 0) {
   private def getPredicate: BlockState => Boolean =
@@ -47,10 +42,23 @@ case class BlockStateRequirement(state: TagKey[Block] | Block | BlockState, tota
 // TODO: Convert to datapack config
 val shrineTierRequirements = List(
   Set(
-    BlockStateRequirement(BlockTags.CANDLES, 1)
+    BlockStateRequirement(BlockTags.LOGS, 16),
+    BlockStateRequirement(BlockTags.LEAVES, 32)
   ),
   Set(
-    BlockStateRequirement(Blocks.CRAFTING_TABLE, 1)
+    BlockStateRequirement(BlockTags.STONE_BRICKS, 16)
+  ),
+  Set(
+    BlockStateRequirement(Blocks.LANTERN, 8)
+  ),
+  Set(
+    BlockStateRequirement(Blocks.GOLD_BLOCK, 4)
+  ),
+  Set(
+    BlockStateRequirement(BlockTags.CANDLES, 5)
+  ),
+  Set(
+    BlockStateRequirement(BlockTags.TERRACOTTA, 16)
   )
 )
 

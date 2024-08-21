@@ -1,3 +1,7 @@
 {
-  sequence: ["sleeping"],
+  sequence: [
+    // We don't want other tasks to halt if a survival task fails. 
+    {selector: ["sleeping", "add(key=maladies, value=insomnia)"]},
+    {selector: ["eating", "add(key=maladies, value=hunger)"]},
+  ],
 }

@@ -3,9 +3,8 @@ package io.github.jugbot.screen
 import io.github.jugbot.Mod
 import io.github.jugbot.blockentity.ShrineBlockEntity
 import net.minecraft.client.GameNarrator
-import net.minecraft.client.gui.{Font, GuiGraphics}
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.MultiLineTextWidget
-import net.minecraft.client.gui.font.FontSet
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation

@@ -16,7 +16,7 @@
         },
         "set(key=target, value=bed_position",
         "go_to_target",
-        "sleep",
+        "sleep", // Returns RUNNING if successful
       ],
     },
     else: {

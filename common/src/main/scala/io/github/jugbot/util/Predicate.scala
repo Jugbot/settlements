@@ -6,7 +6,7 @@ import net.minecraft.commands.CommandBuildContext
 import net.minecraft.commands.arguments.blocks.BlockPredicateArgument
 import net.minecraft.commands.arguments.item.ItemPredicateArgument
 
-private def commandBuildContext =
+private val commandBuildContext =
   CommandBuildContext.simple(GameInstance.getServer.registryAccess(),
                              GameInstance.getServer.getWorldData.enabledFeatures()
   )
