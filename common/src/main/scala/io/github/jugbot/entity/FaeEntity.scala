@@ -46,6 +46,8 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
 
   override def canPickUpLoot = true
 
+  override def shouldShowName = false
+
   private var behaviorLog = Seq.empty[BehaviorLog]
   override def tick(): Unit = {
     super.tick()
