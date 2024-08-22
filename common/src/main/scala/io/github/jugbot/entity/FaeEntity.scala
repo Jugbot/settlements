@@ -258,9 +258,9 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
             BehaviorFailure
         }
       case FaeBehavior.holds_at_least(itemQuery, amount) =>
-        if this.count(itemQuery) >= amount.toInt then BehaviorSuccess else BehaviorFailure
+        if this.getInventory.count(itemQuery) >= amount.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.holds_at_most(itemQuery, amount) =>
-        if this.count(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
+        if this.getInventory.count(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.target_nearest_stockpile_with(itemQuery) =>
         val predicate = itemPredicate(itemQuery)
         val maybeClosest = BlockPos
@@ -286,7 +286,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
           this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala
         } match
           case Some(chest: ChestBlockEntity) =>
-            val success = chest.transferItemsUntilTargetHas(this, itemQuery, amount.toInt)
+            val success = chest.transferItemsUntilTargetHas(this.getInventory, itemQuery, amount.toInt)
             if success then BehaviorSuccess else BehaviorFailure
           case None => BehaviorFailure
       case FaeBehavior.transfer_item_to_target_until(itemQuery, amount) =>
@@ -294,7 +294,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
           this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala
         } match
           case Some(chest: ChestBlockEntity) =>
-            val success = this.transferItemsUntilSelfHas(chest, itemQuery, amount.toInt)
+            val success = this.getInventory.transferItemsUntilSelfHas(chest, itemQuery, amount.toInt)
             if success then BehaviorSuccess else BehaviorFailure
           case None => BehaviorFailure
       case FaeBehavior.set(to, from) =>
@@ -304,7 +304,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         }
         BehaviorSuccess
       case FaeBehavior.holds(itemQuery, min, max) =>
-        val count = this.count(itemQuery)
+        val count = this.getInventory.count(itemQuery)
         if count >= min.toInt && count <= max.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.obtain_job() =>
         blackboard.update("job", "farmer")
@@ -317,10 +317,10 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
       case FaeBehavior.is_hungry() =>
         if this.foodData.needsFood then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.eat_food() =>
-        this.queryFirst("#c:foods") match {
+        this.getInventory.queryFirst("#c:foods") match {
           case Some(ItemSlot(itemStack, slot)) =>
             val newStack = this.foodData.eat(itemStack)
-            this.setItem(slot, newStack)
+            this.getInventory.setItem(slot, newStack)
             BehaviorSuccess
           case None => BehaviorFailure
         }
