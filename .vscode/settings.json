@@ -3,5 +3,6 @@
     "java.configuration.updateBuildConfiguration": "automatic",
     "files.watcherExclude": {
         "**/target": true
-    }
+    },
+    "workbench.colorTheme": "Bluloco Dark",
 }
