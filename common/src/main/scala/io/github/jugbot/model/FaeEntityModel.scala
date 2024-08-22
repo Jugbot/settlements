@@ -7,13 +7,15 @@ import io.github.jugbot.entity.FaeEntity
 import net.minecraft.client.model.HumanoidModel
 import net.minecraft.client.model.geom.{ModelLayerLocation, ModelPart, PartPose}
 import net.minecraft.client.model.geom.builders.{CubeDeformation, CubeListBuilder, LayerDefinition, MeshDefinition}
+import net.minecraft.client.renderer.RenderType
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.RandomSource
 import net.minecraft.world.entity.{EquipmentSlot, HumanoidArm}
 
 import java.lang
 
-class FaeEntityModel(modelPart: ModelPart) extends HumanoidModel[FaeEntity](modelPart) {
+class FaeEntityModel(modelPart: ModelPart)
+    extends HumanoidModel[FaeEntity](modelPart, (r: ResourceLocation) => RenderType.entityTranslucentEmissive(r)) {
   private val parts = modelPart.getAllParts.filter((modelPartx: ModelPart) => !modelPartx.isEmpty).toList
   private val leftSleeve = modelPart.getChild("left_sleeve")
   private val rightSleeve = modelPart.getChild("right_sleeve")
@@ -28,17 +30,6 @@ class FaeEntityModel(modelPart: ModelPart) extends HumanoidModel[FaeEntity](mode
     super.bodyParts(),
     ImmutableList.of(this.leftPants, this.rightPants, this.leftSleeve, this.rightSleeve, this.jacket)
   )
-
-  // def renderEars(poseStack: Nothing, vertexConsumer: Nothing, i: Int, j: Int): Unit = {
-  //   this.ear.copyFrom(this.head)
-  //   this.ear.x = 0.0F
-  //   this.ear.y = 0.0F
-  //   this.ear.render(poseStack, vertexConsumer, i, j)
-  // }
-
-  // def renderCloak(poseStack: Nothing, vertexConsumer: Nothing, i: Int, j: Int): Unit = {
-  //   this.cloak.render(poseStack, vertexConsumer, i, j)
-  // }
 
   override def setupAnim(livingEntity: FaeEntity, f: Float, g: Float, h: Float, i: Float, j: Float): Unit = {
     super.setupAnim(livingEntity, f, g, h, i, j)
