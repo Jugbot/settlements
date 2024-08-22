@@ -15,7 +15,7 @@ import net.minecraft.world.entity.{EquipmentSlot, HumanoidArm}
 import java.lang
 
 class FaeEntityModel(modelPart: ModelPart)
-    extends HumanoidModel[FaeEntity](modelPart, (r: ResourceLocation) => RenderType.entityTranslucentEmissive(r)) {
+    extends HumanoidModel[FaeEntity](modelPart, (r: ResourceLocation) => RenderType.entityTranslucent(r)) {
   private val parts = modelPart.getAllParts.filter((modelPartx: ModelPart) => !modelPartx.isEmpty).toList
   private val leftSleeve = modelPart.getChild("left_sleeve")
   private val rightSleeve = modelPart.getChild("right_sleeve")
