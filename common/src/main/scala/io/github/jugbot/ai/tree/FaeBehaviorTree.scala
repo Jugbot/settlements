@@ -56,6 +56,7 @@ object FaeBehavior {
   case class is_not_sleeping() extends FaeBehavior
   case class stop_sleeping() extends FaeBehavior
   case class target_closest_block(block: String) extends FaeBehavior
+  case class target_is_block(block: String) extends FaeBehavior
   case class has_space_for_target_produce() extends FaeBehavior
   case class break_block(blockPos: String) extends FaeBehavior
   case class place_item_at_target(item: String, blockPos: String) extends FaeBehavior

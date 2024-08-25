@@ -199,6 +199,13 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
             BehaviorSuccess
           case None => BehaviorFailure
         }
+      case FaeBehavior.target_is_block(blockQuery) =>
+        blackboard.get(SPECIAL_KEYS.TARGET) match {
+          case Some(blockPos: BlockPos) =>
+            val predicate = blockPredicate(blockQuery)
+            if predicate(BlockInWorld(this.level(), blockPos, false)) then BehaviorSuccess else BehaviorFailure
+          case _ => BehaviorFailure
+        }
       case FaeBehavior.has_space_for_target_produce() =>
         blackboard.get(SPECIAL_KEYS.TARGET) match {
           case Some(blockPos: BlockPos) =>

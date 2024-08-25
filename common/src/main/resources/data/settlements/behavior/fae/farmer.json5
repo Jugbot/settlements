@@ -1,19 +1,95 @@
 {
-  selector: [
+  sequence: [
+    // For now since we don't want to repeat a search for all crop types we can search for any crop and then match by type.
     {
-      sequence: [
-        // TODO: If the settler has too many seeds, it should deposit till less than 64 to avoid repathing when getting a single item over 64
-        // Could also replace greedy with an argument for ideal target amount
-        // satisfy(item=#,min=1,max=64,ideal=32)
-        "satisfy(item=minecraft:wheat_seeds, min=1, max=64)",
-        "target_closest_block(block=minecraft:wheat[age=7])",
-        "has_space_for_target_produce",
-        "go_to_target",
-        "break_block(blockPos=target)",
-        // TODO: Pick up nearby items
-        "place_item_at_target(item=minecraft:wheat_seeds, blockPos=target)"
+      target_closest_block: {
+        block: [
+          "minecraft:wheat",
+          // "minecraft:carrots",
+          // "minecraft:potatoes",
+          // "minecraft:beetroots",
+          // "minecraft:nether_wart",
+          // "minecraft:sweet_berry_bush",
+          // "minecraft:cocoa",
+          // "minecraft:melon_stem",
+          // "minecraft:pumpkin_stem",
+          // "minecraft:bamboo",
+          // "minecraft:sugar_cane",
+        ]
+      }
+    },
+    {
+      selector: [
+        {
+          sequence: [
+            "target_is_block(block=minecraft:wheat)",
+            "farm(mature_crop=minecraft:wheat[], crop_seeds=minecraft:wheat_seeds, produce=minecraft:wheat)",
+          ],
+        },
+        // TODO: Game Tests
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:carrots)",
+        //            "farm(mature_crop=minecraft:carrots, crop_seeds=minecraft:carrot, produce=minecraft:carrot)",
+        //          ]
+        //        },
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:potatoes)",
+        //            "farm(mature_crop=minecraft:potatoes, crop_seeds=minecraft:potato, produce=minecraft:potato)",
+        //          ]
+        //        },
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:beetroots)",
+        //            "farm(mature_crop=minecraft:beetroots, crop_seeds=minecraft:beetroot_seeds, produce=minecraft:beetroot)",
+        //          ]
+        //        },
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:nether_wart)",
+        //            "farm(mature_crop=minecraft:nether_wart, crop_seeds=minecraft:nether_wart, produce=minecraft:nether_wart)",
+        //          ]
+        //        },
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:sweet_berry_bush)",
+        //            "farm(mature_crop=minecraft:sweet_berry_bush, crop_seeds=minecraft:sweet_berries, produce=minecraft:sweet_berries)",
+        //          ]
+        //        },
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:cocoa)",
+        //            "farm(mature_crop=minecraft:cocoa, crop_seeds=minecraft:cocoa_beans, produce=minecraft:cocoa_beans)",
+        //          ]
+        //        },
+        // TODO: Crops that don't need replanting
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:melon_stem)",
+        //            "farm(mature_crop=minecraft:melon_stem, crop_seeds=minecraft:melon_seeds, produce=minecraft:melon)",
+        //          ]
+        //        },
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:pumpkin_stem)",
+        //            "farm(mature_crop=minecraft:pumpkin_stem, crop_seeds=minecraft:pumpkin_seeds, produce=minecraft:pumpkin)",
+        //          ]
+        //        },
+        // TODO: Tall crops
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:bamboo)",
+        //            "farm(mature_crop=minecraft:bamboo, crop_seeds=minecraft:bamboo, produce=minecraft:bamboo)",
+        //          ]
+        //        },
+        //        {
+        //          sequence: [
+        //            "target_is_block(block=minecraft:sugar_cane)",
+        //            "farm(mature_crop=minecraft:sugar_cane, crop_seeds=minecraft:sugar_cane, produce=minecraft:sugar_cane)",
+        //          ]
+        //        },
       ],
     },
-    "deposit_until(item=minecraft:wheat, amount=0)",
   ],
 }
