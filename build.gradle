@@ -55,6 +55,7 @@ subprojects {
         mappings loom.officialMojangMappings()
 
         implementation 'com.fasterxml.jackson.module:jackson-module-scala_3:2.17.1'
+        implementation 'org.scala-lang.modules:scala-parser-combinators_3:2.4.0'
         compileOnly(group: 'org.scala-lang', name: 'scala3-library_3', version: rootProject.scala_version)
         // Add if you need this library. I use a modified version of Cats to avoid some module errors.
         compileOnly(group: 'org.typelevel', name: 'cats-core_3', version: rootProject.cats_version)

@@ -199,6 +199,13 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
             BehaviorSuccess
           case None => BehaviorFailure
         }
+      case FaeBehavior.target_is_block(blockQuery) =>
+        blackboard.get(SPECIAL_KEYS.TARGET) match {
+          case Some(blockPos: BlockPos) =>
+            val predicate = blockPredicate(blockQuery)
+            if predicate(BlockInWorld(this.level(), blockPos, false)) then BehaviorSuccess else BehaviorFailure
+          case _ => BehaviorFailure
+        }
       case FaeBehavior.has_space_for_target_produce() =>
         blackboard.get(SPECIAL_KEYS.TARGET) match {
           case Some(blockPos: BlockPos) =>
@@ -307,7 +314,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         val count = this.getInventory.count(itemQuery)
         if count >= min.toInt && count <= max.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.obtain_job() =>
-        blackboard.update("job", "farmer")
+        blackboard.update("job", "farmer_wheat")
         BehaviorSuccess
       case FaeBehavior.equals_literal(key, value) =>
         blackboard.get(key) match {

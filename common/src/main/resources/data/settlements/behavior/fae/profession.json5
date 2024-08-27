@@ -1,6 +1,53 @@
 {
   sequence: [
     { selector: ["has(value=job)", "obtain_job"] },
-    { selector: [{ sequence: ["equals_literal(key=job, value=farmer)", "farmer"] }] },
+    {
+      selector: [
+        {
+          sequence: [
+            "equals_literal(key=job, value=farmer_beetroots)",
+            "job_farmer_beetroots",
+          ],
+        },
+        {
+          sequence: [
+            "equals_literal(key=job, value=farmer_carrots)",
+            "job_farmer_carrots",
+          ],
+        },
+        {
+          sequence: [
+            "equals_literal(key=job, value=farmer_cocoa)",
+            "job_farmer_cocoa",
+          ],
+        },
+        {
+          sequence: [
+            "equals_literal(key=job, value=farmer_nether_wart)",
+            "job_farmer_nether_wart",
+          ],
+        },
+        {
+          sequence: [
+            "equals_literal(key=job, value=farmer_potatoes)",
+            "job_farmer_potatoes",
+          ],
+        },
+        {
+          sequence: [
+            "equals_literal(key=job, value=farmer_wheat)",
+            "job_farmer_wheat",
+          ],
+        },
+        // TODO: Right click to harvest
+        //            "farm(mature_crop=minecraft:sweet_berry_bush, crop_seeds=minecraft:sweet_berries, produce=minecraft:sweet_berries)",
+        // TODO: Crops that don't need replanting
+        //            "farm(mature_crop=minecraft:melon_stem, crop_seeds=minecraft:melon_seeds, produce=minecraft:melon)",
+        //            "farm(mature_crop=minecraft:pumpkin_stem, crop_seeds=minecraft:pumpkin_seeds, produce=minecraft:pumpkin)",
+        // TODO: Tall crops
+        //            "farm(mature_crop=minecraft:bamboo, crop_seeds=minecraft:bamboo, produce=minecraft:bamboo)",
+        //            "farm(mature_crop=minecraft:sugar_cane, crop_seeds=minecraft:sugar_cane, produce=minecraft:sugar_cane)",
+      ],
+    },
   ],
 }

@@ -214,5 +214,6 @@ object BTMapper {
     .enable(JsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)
     .disable(JsonWriteFeature.QUOTE_FIELD_NAMES)
     .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
+    .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
     .build()
 }
