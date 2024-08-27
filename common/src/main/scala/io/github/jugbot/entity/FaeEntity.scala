@@ -314,7 +314,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         val count = this.getInventory.count(itemQuery)
         if count >= min.toInt && count <= max.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.obtain_job() =>
-        blackboard.update("job", "farmer")
+        blackboard.update("job", "farmer_wheat")
         BehaviorSuccess
       case FaeBehavior.equals_literal(key, value) =>
         blackboard.get(key) match {
