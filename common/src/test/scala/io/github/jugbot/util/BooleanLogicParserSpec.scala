@@ -10,7 +10,7 @@ class BooleanLogicParserSpec extends UnitSuite {
     val input = "A"
     val predicate: String => Boolean = {
       case "A" => true
-      case tag   => handleUnknownTag(tag)
+      case tag => handleUnknownTag(tag)
     }
     BooleanLogicParser.parseAndEvaluate(input)(predicate) should be(true)
   }
@@ -20,7 +20,7 @@ class BooleanLogicParserSpec extends UnitSuite {
     val predicate: String => Boolean = {
       case "A" => true
       case "B" => true
-      case tag   => handleUnknownTag(tag)
+      case tag => handleUnknownTag(tag)
     }
     BooleanLogicParser.parseAndEvaluate(input)(predicate) should be(true)
   }
@@ -30,7 +30,7 @@ class BooleanLogicParserSpec extends UnitSuite {
     val predicate: String => Boolean = {
       case "A" => false
       case "B" => true
-      case tag   => handleUnknownTag(tag)
+      case tag => handleUnknownTag(tag)
     }
     BooleanLogicParser.parseAndEvaluate(input)(predicate) should be(true)
   }
@@ -39,7 +39,7 @@ class BooleanLogicParserSpec extends UnitSuite {
     val input = "not A"
     val predicate: String => Boolean = {
       case "A" => false
-      case tag   => handleUnknownTag(tag)
+      case tag => handleUnknownTag(tag)
     }
     BooleanLogicParser.parseAndEvaluate(input)(predicate) should be(true)
   }
@@ -53,11 +53,11 @@ class BooleanLogicParserSpec extends UnitSuite {
       D <- Seq(true, false)
     } {
       val predicate: String => Boolean = {
-        case "A"       => A
-        case "B"       => B
-        case "C"       => C
+        case "A" => A
+        case "B" => B
+        case "C" => C
         case "D" => D
-        case tag   => handleUnknownTag(tag)
+        case tag => handleUnknownTag(tag)
       }
       val expected = (A && B) || (C && !D)
       BooleanLogicParser.parseAndEvaluate(input)(predicate) should be(expected)

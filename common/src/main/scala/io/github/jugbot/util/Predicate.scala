@@ -20,12 +20,15 @@ object BooleanLogicParser extends JavaTokenParsers {
     notExpr * ("and" ^^^ { (a: Returns, b: Returns) => (x: String => Boolean) => a(x) && b(x) })
   private def notExpr: Parser[Returns] = "not" ~> simpleExpr ^^ { a => (x: String => Boolean) => !a(x) } | simpleExpr
   // TODO: Handle strings with spaces in it
-  private def simpleExpr: Parser[Returns] = "(" ~> expr <~ ")" | """[^\s()]+""".r ^^ { tag => (x: String => Boolean) => x(tag) }
+  private def simpleExpr: Parser[Returns] = "(" ~> expr <~ ")" | """[^\s()]+""".r ^^ { tag => (x: String => Boolean) =>
+    x(tag)
+  }
 
   def parseAndEvaluate(input: String): Returns =
     parseAll(expr, input) match {
       case Success(result, _) => result
-      case failure: NoSuccess => throw new IllegalArgumentException(s"Failed to parse expression: '$input'\n${failure.msg}")
+      case failure: NoSuccess =>
+        throw new IllegalArgumentException(s"Failed to parse expression: '$input'\n${failure.msg}")
     }
 }
 
