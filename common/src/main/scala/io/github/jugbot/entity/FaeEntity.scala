@@ -411,7 +411,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
           .orElse(
             BlockPos
               .randomInCube(
-                FaeEntity.RANDOM,
+                this.random,
                 FaeEntity.BRUTE_FORCE_SEARCH_ATTEMPTS,
                 this.blockPosition,
                 FaeEntity.BRUTE_FORCE_SEARCH_RADIUS
@@ -429,8 +429,6 @@ object FaeEntity {
   private val NAVIGATION_PROXIMITY = 1
   private val BRUTE_FORCE_SEARCH_RADIUS = 12
   private val BRUTE_FORCE_SEARCH_ATTEMPTS = 20
-  private val RANDOM =
-    RandomSource.create()
 
   final val TYPE: Supplier[EntityType[FaeEntity]] = Suppliers.memoize(() =>
     EntityType.Builder
