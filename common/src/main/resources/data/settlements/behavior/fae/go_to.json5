@@ -17,10 +17,15 @@
         },
         // Else, create a path
         else: {
-          sequence: [
-            // TODO: Show feedback if no path can be found
-            "create_nav_path_to(target=$target)",
-            "move_along_current_path",
+          selector: [
+            {
+              sequence: [
+                // TODO: Show feedback if no path can be found
+                "create_nav_path_to(target=$target)",
+                "move_along_current_path",
+              ]
+            },
+            "remove(key=$target)"
           ],
         },
       },

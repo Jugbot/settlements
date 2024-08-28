@@ -14,6 +14,7 @@ import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.{SoundEvents, SoundSource}
 import net.minecraft.tags.BlockTags
+import net.minecraft.util.RandomSource
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.*
 import net.minecraft.world.entity.ai.attributes.{AttributeSupplier, Attributes}
@@ -25,15 +26,15 @@ import net.minecraft.world.level.block.BedBlock
 import net.minecraft.world.level.block.entity.{BlockEntityType, ChestBlockEntity}
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.pattern.BlockInWorld
+import net.minecraft.world.level.gameevent.GameEvent
 import net.minecraft.world.level.storage.loot.LootParams
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams
 import net.minecraft.world.{InteractionHand, InteractionResult}
 
 import java.util.function.Supplier
 import scala.collection.mutable
-import scala.jdk.CollectionConverters.CollectionHasAsScala
+import scala.jdk.CollectionConverters.{CollectionHasAsScala, IterableHasAsScala}
 import scala.jdk.OptionConverters.RichOptional
-import net.minecraft.world.level.gameevent.GameEvent
 
 class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     extends Mob(entityType: EntityType[FaeEntity], world: Level)
@@ -183,16 +184,11 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         BehaviorSuccess
       case FaeBehavior.target_closest_block(blockQuery) =>
         val predicate = blockPredicate(blockQuery)
-        val maybeClosest = BlockPos
-          .findClosestMatch(this.blockPosition,
-                            12,
-                            12,
-                            bp =>
-                              predicate(
-                                BlockInWorld(this.level(), bp, false)
-                              )
+        val maybeClosest = this.bruteForceSearch(bp =>
+          predicate(
+            BlockInWorld(this.level(), bp, false)
           )
-          .toScala
+        )
         maybeClosest match {
           case Some(value) =>
             blackboard.update("target", value)
@@ -270,22 +266,17 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         if this.getInventory.count(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.target_nearest_stockpile_with(itemQuery) =>
         val predicate = itemPredicate(itemQuery)
-        val maybeClosest = BlockPos
-          .findClosestMatch(this.blockPosition,
-                            12,
-                            12,
-                            bp => this.level.getBlockEntity(bp, BlockEntityType.CHEST).isPresent
-          )
-          .toScala
+        val maybeClosest =
+          this.bruteForceSearch { (bp: BlockPos) =>
+            this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala match {
+              case Some(chest: ChestBlockEntity) => chest.items.count(predicate) > 0
+              case _                             => false
+            }
+          }
         maybeClosest match {
           case Some(blockPos) =>
-            val chest = this.level.getBlockEntity(blockPos, BlockEntityType.CHEST).get
-            chest.items.count(predicate) match {
-              case 0 => BehaviorFailure
-              case _ =>
-                blackboard.update(SPECIAL_KEYS.TARGET, blockPos)
-                BehaviorSuccess
-            }
+            blackboard.update(SPECIAL_KEYS.TARGET, blockPos)
+            BehaviorSuccess
           case None => BehaviorFailure
         }
       case FaeBehavior.transfer_item_from_target_until(itemQuery, amount) =>
@@ -309,6 +300,9 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
           case Some(value) => blackboard.update(to, value)
           case None        => blackboard.remove(to)
         }
+        BehaviorSuccess
+      case FaeBehavior.remove(key) =>
+        blackboard.remove(key)
         BehaviorSuccess
       case FaeBehavior.holds(itemQuery, min, max) =>
         val count = this.getInventory.count(itemQuery)
@@ -395,12 +389,48 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
       )
     }
   }
+
+  /**
+   * Attempts to search for a block within a radius.
+   */
+  private def bruteForceSearch(predicate: Function[BlockPos, Boolean]): Option[BlockPos] =
+    this.blackboard.get(SPECIAL_KEYS.TARGET) match {
+      // Shortcut if there is already a valid target
+      case Some(bp: BlockPos) if predicate(bp) => Option(bp)
+      // Else perform expensive search
+      case _ =>
+        // Check adjacent blocks first, then do a limited random search in a large area
+        // The adjacent search should not go beyond the navigation termination distance otherwise the pathfinding could get stuck on a bad target
+        BlockPos
+          .findClosestMatch(this.blockPosition,
+                            FaeEntity.NAVIGATION_PROXIMITY,
+                            FaeEntity.NAVIGATION_PROXIMITY,
+                            bp => predicate(bp)
+          )
+          .toScala
+          .orElse(
+            BlockPos
+              .randomInCube(
+                FaeEntity.RANDOM,
+                FaeEntity.BRUTE_FORCE_SEARCH_ATTEMPTS,
+                this.blockPosition,
+                FaeEntity.BRUTE_FORCE_SEARCH_RADIUS
+              )
+              .asScala
+              .find((bp: BlockPos) => predicate(bp))
+          )
+
+    }
 }
 
 object FaeEntity {
   private val BED_POSITION_NBT_KEY = "bedPosition"
 
   private val NAVIGATION_PROXIMITY = 1
+  private val BRUTE_FORCE_SEARCH_RADIUS = 12
+  private val BRUTE_FORCE_SEARCH_ATTEMPTS = 20
+  private val RANDOM =
+    RandomSource.create()
 
   final val TYPE: Supplier[EntityType[FaeEntity]] = Suppliers.memoize(() =>
     EntityType.Builder
