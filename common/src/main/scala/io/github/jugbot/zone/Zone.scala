@@ -4,6 +4,10 @@ import net.minecraft.core.{BlockPos, Vec3i}
 import net.minecraft.util.Mth.clamp
 import net.minecraft.world.level.levelgen.structure.BoundingBox
 
+import scala.math.addExact
+
+import io.github.jugbot.extension.LazyRange.*
+
 class Zone(xA: Int, yA: Int, zA: Int, xB: Int, yB: Int, zB: Int) extends BoundingBox(xA, yA, zA, xB, yB, zB) {
 
   def this(blockPos: BlockPos) =
@@ -17,16 +21,17 @@ class Zone(xA: Int, yA: Int, zA: Int, xB: Int, yB: Int, zB: Int) extends Boundin
 
   /**
    * Iterates through all coordinates in the zone, ordered by increasing distance from blockPos
-   * @param blockPos
+   * @param blockPos The center of the search (which will be excluded from the result)
+   * @param maxDistance Distance from blockPos to the furthest coordinate to include
    */
-  def closestCoordinatesInside(blockPos: Vec3i, maxDistance: Int = Int.MaxValue): IndexedSeq[Vec3i] = {
+  def closestCoordinatesInside(blockPos: Vec3i, maxDistance: Int = Int.MaxValue): LazyList[Vec3i] = {
     val startingBlock = closestCoordinateInside(blockPos)
     // TODO: Could be more efficient by skipping the generation of coordinates not in the zone
     // Longest length is from one end of the zone to the other
-    val largestLength = this.getXSpan + this.getYSpan + this.getZSpan
-    val maxSearchDistance = clamp(0, maxDistance - startingBlock.distManhattan(blockPos), largestLength)
+    val largestLength = addExact(addExact(this.getXSpan, this.getYSpan), this.getZSpan)
+    val maxSearchDistance = clamp(0, maxDistance - blockPos.distManhattan(startingBlock), largestLength)
     for {
-      distance <- 0 to maxSearchDistance
+      distance <- 0.toLazy(maxSearchDistance)
       // Get the planar combinations of coordinates that sum to distance
       xSign <- Seq(-1, 1)
       ySign <- Seq(-1, 1)
@@ -50,16 +55,16 @@ class Zone(xA: Int, yA: Int, zA: Int, xB: Int, yB: Int, zB: Int) extends Boundin
       clamp(blockPos.getZ, this.minZ, this.maxZ)
     )
 
-  /**
-   * Returns a triangular plane of coordinates that all share the same manhattan distance from blockPos
-   */
-  private def combinationsOfThreeThatSumTo(d: Int) =
-    for {
-      a <- 0 to d
-      b <- 0 to (d - a)
-      c = d - a - b
-      if c >= 0
-    } yield (a, b, c)
-
   def volume = this.getXSpan * this.getYSpan * this.getZSpan
 }
+
+/**
+ * Returns a triangular plane of positive coordinates that all share the same manhattan distance from the origin
+ */
+private def combinationsOfThreeThatSumTo(d: Int) =
+  for {
+    a <- 0.toLazy(d)
+    b <- 0.toLazy(d - a)
+    c = d - a - b
+    if c >= 0
+  } yield (a, b, c)
