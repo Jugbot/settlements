@@ -8,7 +8,7 @@ import scala.math.addExact
 
 import io.github.jugbot.extension.LazyRange.*
 
-class Zone(xA: Int, yA: Int, zA: Int, xB: Int, yB: Int, zB: Int) extends BoundingBox(xA, yA, zA, xB, yB, zB) {
+case class Zone(xA: Int, yA: Int, zA: Int, xB: Int, yB: Int, zB: Int) extends BoundingBox(xA, yA, zA, xB, yB, zB) {
 
   def this(blockPos: BlockPos) =
     this(blockPos.getX, blockPos.getY, blockPos.getZ, blockPos.getX + 1, blockPos.getY + 1, blockPos.getZ + 1)
@@ -55,7 +55,7 @@ class Zone(xA: Int, yA: Int, zA: Int, xB: Int, yB: Int, zB: Int) extends Boundin
       clamp(blockPos.getZ, this.minZ, this.maxZ)
     )
 
-  def volume = this.getXSpan * this.getYSpan * this.getZSpan
+  def volume: Int = this.getXSpan * this.getYSpan * this.getZSpan
 }
 
 /**
