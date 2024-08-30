@@ -1,12 +1,14 @@
-package io.github.jugbot.zone
+package io.github.jugbot.extension
 
 import io.github.jugbot.UnitSuite
+import io.github.jugbot.extension.BoundingBox.closestCoordinatesInside
 import net.minecraft.core.Vec3i
+import net.minecraft.world.level.levelgen.structure.BoundingBox
 
-class ZoneTest extends UnitSuite {
+class BoundingBoxTest extends UnitSuite {
 
   test("closestBlocksInside should return all blocks inside the zone") {
-    val zone = new Zone(0, 0, 0, 3, 3, 3)
+    val zone = new BoundingBox(0, 0, 0, 3, 3, 3)
     val blockPos = new Vec3i(1, 1, 1)
     val result = zone.closestCoordinatesInside(blockPos).toList
 
@@ -14,7 +16,7 @@ class ZoneTest extends UnitSuite {
   }
 
   test("closestBlocksInside should return blocks inside the zone within some distance") {
-    val zone = new Zone(0, 0, 0, 3, 3, 3)
+    val zone = new BoundingBox(0, 0, 0, 3, 3, 3)
     val blockPos = new Vec3i(1, 1, 1)
     val result = zone.closestCoordinatesInside(blockPos, 1).toList
 
@@ -22,7 +24,7 @@ class ZoneTest extends UnitSuite {
   }
 
   test("closestBlocksInside should return no blocks within zero distance") {
-    val zone = new Zone(0, 0, 0, 3, 3, 3)
+    val zone = new BoundingBox(0, 0, 0, 3, 3, 3)
     val blockPos = new Vec3i(1, 1, 1)
     val result = zone.closestCoordinatesInside(blockPos, 0).toList
 
@@ -30,7 +32,7 @@ class ZoneTest extends UnitSuite {
   }
 
   test("closestBlocksInside should return blocks ordered by increasing distance from blockPos") {
-    val zone = new Zone(0, 0, 0, 3, 3, 3)
+    val zone = new BoundingBox(0, 0, 0, 3, 3, 3)
     val blockPos = new Vec3i(2, 2, 2)
     val result = zone.closestCoordinatesInside(blockPos)
     var distance = 1
@@ -48,7 +50,7 @@ class ZoneTest extends UnitSuite {
   }
 
   test("closestBlocksInside should handle edge case where blockPos is outside the zone") {
-    val zone = new Zone(0, 0, 0, 5, 5, 5)
+    val zone = new BoundingBox(0, 0, 0, 5, 5, 5)
     val blockPos = new Vec3i(10, 10, 10)
     val result = zone.closestCoordinatesInside(blockPos).toList
 
@@ -56,7 +58,7 @@ class ZoneTest extends UnitSuite {
   }
 
   test("closestBlocksInside should handle edge case where blockPos is on the boundary of the zone") {
-    val zone = new Zone(0, 0, 0, 5, 5, 5)
+    val zone = new BoundingBox(0, 0, 0, 5, 5, 5)
     val blockPos = new Vec3i(6, 6, 6)
     val result = zone.closestCoordinatesInside(blockPos).toList
 
@@ -64,7 +66,7 @@ class ZoneTest extends UnitSuite {
   }
 
   test("closestBlocksInside should handle edge case where zone is a single block") {
-    val zone = new Zone(2, 2, 2, 2, 2, 2)
+    val zone = new BoundingBox(2, 2, 2, 2, 2, 2)
     val blockPos = new Vec3i(2, 2, 2)
     val result = zone.closestCoordinatesInside(blockPos).toList
 
@@ -72,7 +74,7 @@ class ZoneTest extends UnitSuite {
   }
 
   test("closestBlocksInside should handle edge case where zone is a single block and blockPos is outside") {
-    val zone = new Zone(2, 2, 2, 2, 2, 2)
+    val zone = new BoundingBox(2, 2, 2, 2, 2, 2)
     val blockPos = new Vec3i(20, 20, 20)
     val result = zone.closestCoordinatesInside(blockPos).toList
 
@@ -84,7 +86,7 @@ class ZoneTest extends UnitSuite {
       val runtime = Runtime.getRuntime
       runtime.totalMemory - runtime.freeMemory
     }
-    val zone = new Zone(0, 0, 0, 1e2.toInt, 1e2.toInt, 1e2.toInt)
+    val zone = new BoundingBox(0, 0, 0, 1e2.toInt, 1e2.toInt, 1e2.toInt)
     val blockPos = new Vec3i(-1, -1, -1)
     val usedMemoryBefore = usedMemory
     // Should not calculate the entire zone of 1e6 blocks if we just need the first one
@@ -97,7 +99,7 @@ class ZoneTest extends UnitSuite {
   }
 
   test("closestBlocksInside should handle max integer zone size") {
-    val zone = new Zone(0, 0, 0, Int.MaxValue, Int.MaxValue, Int.MaxValue)
+    val zone = new BoundingBox(0, 0, 0, Int.MaxValue, Int.MaxValue, Int.MaxValue)
     val blockPos = new Vec3i(0, 0, 0)
 
     assertThrows[ArithmeticException] {
