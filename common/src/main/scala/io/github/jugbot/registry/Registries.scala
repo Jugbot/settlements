@@ -8,6 +8,7 @@ import io.github.jugbot.ai.tree.FaeBehaviorTree
 import io.github.jugbot.block.ShrineBlock
 import io.github.jugbot.blockentity.ShrineBlockEntity
 import io.github.jugbot.entity.FaeEntity
+import io.github.jugbot.item.ShrineBlockItem
 import net.minecraft.core.registries.Registries as MojRegistries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.packs.PackType
@@ -43,7 +44,7 @@ object Registries {
   final val SHRINE_BLOCK: RegistrySupplier[Block] = BLOCKS.register("shrine", () => ShrineBlock.INSTANCE)
 
   final val SHRINE_BLOCK_ITEM: RegistrySupplier[Item] =
-    ITEMS.register("shrine", () => new BlockItem(ShrineBlock.INSTANCE, Item.Properties()))
+    ITEMS.register("shrine", () => new ShrineBlockItem())
 
   final val SHRINE_BLOCK_ENTITY: RegistrySupplier[BlockEntityType[ShrineBlockEntity]] =
     BLOCK_ENTITY_TYPES.register("shrine", ShrineBlockEntity.TYPE)

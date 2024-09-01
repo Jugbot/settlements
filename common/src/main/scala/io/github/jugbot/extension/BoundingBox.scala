@@ -4,6 +4,7 @@ import io.github.jugbot.extension.LazyRange.*
 import net.minecraft.core.Vec3i
 import net.minecraft.util.Mth.clamp
 import net.minecraft.world.level.levelgen.structure.BoundingBox
+import net.minecraft.world.phys.AABB
 
 import scala.math.addExact
 
@@ -48,6 +49,24 @@ object BoundingBox {
       )
 
     def volume: Int = bb.getXSpan * bb.getYSpan * bb.getZSpan
+
+    def corners: Seq[Vec3i] = Seq(
+      new Vec3i(bb.minX, bb.minY, bb.minZ),
+      new Vec3i(bb.minX, bb.minY, bb.maxZ),
+      new Vec3i(bb.minX, bb.maxY, bb.minZ),
+      new Vec3i(bb.minX, bb.maxY, bb.maxZ),
+      new Vec3i(bb.maxX, bb.minY, bb.minZ),
+      new Vec3i(bb.maxX, bb.minY, bb.maxZ),
+      new Vec3i(bb.maxX, bb.maxY, bb.minZ),
+      new Vec3i(bb.maxX, bb.maxY, bb.maxZ)
+    )
+
+    def contains(other: BoundingBox): Boolean = {
+      val corners = other.corners
+      corners.forall(bb.isInside)
+    }
+
+    def toAABB: AABB = new AABB(bb.minX, bb.minY, bb.minZ, bb.maxX, bb.maxY, bb.maxZ)
   }
 }
 

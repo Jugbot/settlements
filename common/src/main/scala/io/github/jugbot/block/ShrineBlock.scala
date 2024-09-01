@@ -75,6 +75,7 @@ class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
     (blockEntity, livingEntity) match {
       case (shrineBlockEntity: ShrineBlockEntity, player: Player) =>
         shrineBlockEntity.owners += player.getUUID
+      case _ => ()
     }
   }
 }

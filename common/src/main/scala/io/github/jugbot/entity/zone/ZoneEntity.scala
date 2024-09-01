@@ -1,5 +1,6 @@
 package io.github.jugbot.entity.zone
 
+import io.github.jugbot.extension.AABB.*
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.protocol.Packet
 import net.minecraft.network.protocol.game.ClientGamePacketListener
@@ -9,27 +10,42 @@ import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.{Entity, EntityType, LightningBolt}
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.{Mirror, Rotation}
-import net.minecraft.world.level.levelgen.structure.BoundingBox
 import net.minecraft.world.level.material.PushReaction
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.{InteractionHand, InteractionResult}
 
-class ZoneEntity(entityType: EntityType[ZoneEntity], world: Level, private var bb: BoundingBox)
-    extends Entity(entityType, world) {
-  setBoundingBox(AABB(bb.minX, bb.minY, bb.minZ, bb.maxX, bb.maxY, bb.maxZ))
+enum CollisionLayer:
+  case Settlement, Zoning, Structure
+  private val layers = List(Settlement, Zoning, Structure)
+  def parent: Option[CollisionLayer] = layers.lift(layers.indexOf(this) - 1)
+  def child: Option[CollisionLayer] = layers.lift(layers.indexOf(this) + 1)
 
-  def getBB: BoundingBox = bb
+abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level) extends Entity(entityType, world) {
 
-  def setBB(bb: BoundingBox): Unit = {
-    this.bb = bb
-    setBoundingBox(AABB(bb.minX, bb.minY, bb.minZ, bb.maxX, bb.maxY, bb.maxZ))
+  def this(world: Level, boundingBox: AABB) = {
+    this(null.asInstanceOf[EntityType[? <: ZoneEntity]], world)
+    setBoundingBox(boundingBox)
+    resetPositionToBB()
   }
 
-  override def defineSynchedData(): Unit = {}
+  def getCollisionLayer: CollisionLayer
+
+  private def resetPositionToBB(): Unit = {
+    val bb = getBoundingBox
+    setPosRaw(bb.getCenter.x, bb.getCenter.y, bb.getCenter.z);
+  }
+
+  override def setPos(d: Double, e: Double, f: Double): Unit =
+    super.setPos(d.round.toInt, e.round.toInt, f.round.toInt)
+
+  override def moveTo(x: Double, y: Double, z: Double, yRot: Float, xRot: Float): Unit =
+    super.moveTo(x.round.toInt, y.round.toInt, z.round.toInt, 0, 0)
 
   override def readAdditionalSaveData(compoundTag: CompoundTag): Unit = {}
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {}
+
+  override def defineSynchedData(): Unit = {}
 
   override def canAddPassenger(entity: Entity): Boolean = false
 
