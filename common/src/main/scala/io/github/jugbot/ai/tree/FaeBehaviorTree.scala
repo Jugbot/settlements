@@ -41,6 +41,7 @@ object FaeBehavior {
   /// Blackboard functions
   case class set(key: String, value: String) extends FaeBehavior
   case class has(value: String) extends FaeBehavior
+  case class remove(key: String) extends FaeBehavior
   case class add(key: String, value: String) extends FaeBehavior
 
   case class sleep() extends FaeBehavior

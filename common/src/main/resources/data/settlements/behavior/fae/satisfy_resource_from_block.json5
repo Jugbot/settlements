@@ -7,7 +7,7 @@
         then: {
           sequence: [
             // TODO: Account for partial stacks of $item
-            "target_nearest_stockpile_with(item=air)",
+            "target_nearest_stockpile_with(item=minecraft:air)",
             "go_to_target",
             "transfer_item_to_target_until(item=$item, amount=$max)",
           ]
