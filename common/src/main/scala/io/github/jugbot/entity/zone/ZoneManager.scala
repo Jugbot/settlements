@@ -8,7 +8,6 @@ import net.minecraft.world.phys.AABB
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
-
 /**
  * Manages zones and enforces constraints such as tree hierarchy and collision rules.
  */
