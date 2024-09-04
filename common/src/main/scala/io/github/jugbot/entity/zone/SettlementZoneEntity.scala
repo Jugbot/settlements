@@ -11,7 +11,7 @@ import java.util.function.Supplier
 
 class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: Level)
     extends ZoneEntity(entityType, world) {
-  override def getCollisionLayer: CollisionLayer = CollisionLayer.Settlement
+  override def getZoneType: ZoneType = ZoneType.Settlement
 
   private var maybeShrine: Option[ShrineBlockEntity] = Option.empty
 
@@ -33,12 +33,11 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
 }
 
 object SettlementZoneEntity {
-  val DEFAULT_RADIUS = 48
+  val DEFAULT_RADIUS = 12
 
   final val TYPE: Supplier[EntityType[SettlementZoneEntity]] = Suppliers.memoize(() =>
     EntityType.Builder
       .of[SettlementZoneEntity](new SettlementZoneEntity(_, _), MobCategory.MISC)
-      .sized(DEFAULT_RADIUS + 0.5f, DEFAULT_RADIUS + 0.5f)
       .build("settlement_zone")
   )
 }

@@ -1,9 +1,11 @@
 package io.github.jugbot.entity.zone
 
-import io.github.jugbot.extension.AABB.*
+import dev.architectury.extensions.network.EntitySpawnExtension
+import dev.architectury.networking.NetworkManager
 import net.minecraft.nbt.CompoundTag
+import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.network.protocol.Packet
-import net.minecraft.network.protocol.game.ClientGamePacketListener
+import net.minecraft.network.protocol.game.{ClientGamePacketListener, ClientboundAddEntityPacket}
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.player.Player
@@ -14,36 +16,41 @@ import net.minecraft.world.level.material.PushReaction
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.{InteractionHand, InteractionResult}
 
-enum CollisionLayer:
-  case Settlement, Zoning, Structure
-  private val layers = List(Settlement, Zoning, Structure)
-  def parent: Option[CollisionLayer] = layers.lift(layers.indexOf(this) - 1)
-  def child: Option[CollisionLayer] = layers.lift(layers.indexOf(this) + 1)
+abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
+    extends Entity(entityType, world)
+    with EntitySpawnExtension {
+  def getZoneType: ZoneType
 
-abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level) extends Entity(entityType, world) {
-
-  def this(world: Level, boundingBox: AABB) = {
-    this(null.asInstanceOf[EntityType[? <: ZoneEntity]], world)
-    setBoundingBox(boundingBox)
-    resetPositionToBB()
+  def updateBounds(aabb: AABB): Unit = {
+    setBoundingBox(aabb)
+    setPosRaw(aabb.getCenter.x, aabb.getCenter.y, aabb.getCenter.z);
   }
 
-  def getCollisionLayer: CollisionLayer
-
-  private def resetPositionToBB(): Unit = {
-    val bb = getBoundingBox
-    setPosRaw(bb.getCenter.x, bb.getCenter.y, bb.getCenter.z);
-  }
-
-  override def setPos(d: Double, e: Double, f: Double): Unit =
-    super.setPos(d.round.toInt, e.round.toInt, f.round.toInt)
+  override def setPos(x: Double, y: Double, z: Double): Unit =
+    updateBounds(getBoundingBox.move(x - getX, y - getY, z - getZ))
 
   override def moveTo(x: Double, y: Double, z: Double, yRot: Float, xRot: Float): Unit =
-    super.moveTo(x.round.toInt, y.round.toInt, z.round.toInt, 0, 0)
+    super.moveTo(x, y, z, 0, 0)
 
-  override def readAdditionalSaveData(compoundTag: CompoundTag): Unit = {}
+  override def readAdditionalSaveData(compoundTag: CompoundTag): Unit = {
+    val minX = compoundTag.getDouble("minX")
+    val minY = compoundTag.getDouble("minY")
+    val minZ = compoundTag.getDouble("minZ")
+    val maxX = compoundTag.getDouble("maxX")
+    val maxY = compoundTag.getDouble("maxY")
+    val maxZ = compoundTag.getDouble("maxZ")
+    updateBounds(AABB(minX, minY, minZ, maxX, maxY, maxZ))
+  }
 
-  override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {}
+  override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {
+    val bb = getBoundingBox
+    compoundTag.putDouble("minX", bb.minX)
+    compoundTag.putDouble("minY", bb.minY)
+    compoundTag.putDouble("minZ", bb.minZ)
+    compoundTag.putDouble("maxX", bb.maxX)
+    compoundTag.putDouble("maxY", bb.maxY)
+    compoundTag.putDouble("maxZ", bb.maxZ)
+  }
 
   override def defineSynchedData(): Unit = {}
 
@@ -60,8 +67,6 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     xo = getX
     yo = getY
     zo = getZ
-
-    if getBoundingBox.getXsize == 0 then discard()
   }
 
   override def interact(player: Player, interactionHand: InteractionHand): InteractionResult = InteractionResult.PASS
@@ -76,11 +81,35 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
 
   override def refreshDimensions(): Unit = {}
 
-  override def getAddEntityPacket: Packet[ClientGamePacketListener] = super.getAddEntityPacket
-
   override def isIgnoringBlockTriggers: Boolean = true
 
   override def getPistonPushReaction: PushReaction = PushReaction.IGNORE
 
   override def canChangeDimensions: Boolean = false
+
+  /**
+   * In order to resolve the issue of the game client not knowing the dynamic bounding box size set during initialization, we can sneak that data in place of the delta movement.
+   */
+  override def getAddEntityPacket: Packet[ClientGamePacketListener] = NetworkManager.createAddEntityPacket(this)
+  override def recreateFromPacket(clientboundAddEntityPacket: ClientboundAddEntityPacket): Unit =
+    super.recreateFromPacket(clientboundAddEntityPacket)
+
+  def saveAdditionalSpawnData(buf: FriendlyByteBuf): Unit = {
+    buf.writeDouble(getBoundingBox.minX)
+    buf.writeDouble(getBoundingBox.minY)
+    buf.writeDouble(getBoundingBox.minZ)
+    buf.writeDouble(getBoundingBox.maxX)
+    buf.writeDouble(getBoundingBox.maxY)
+    buf.writeDouble(getBoundingBox.maxZ)
+  }
+
+  def loadAdditionalSpawnData(buf: FriendlyByteBuf): Unit = {
+    val minX = buf.readDouble()
+    val minY = buf.readDouble()
+    val minZ = buf.readDouble()
+    val maxX = buf.readDouble()
+    val maxY = buf.readDouble()
+    val maxZ = buf.readDouble()
+    updateBounds(AABB(minX, minY, minZ, maxX, maxY, maxZ))
+  }
 }

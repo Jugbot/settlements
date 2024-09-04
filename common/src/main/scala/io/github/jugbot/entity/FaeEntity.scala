@@ -14,7 +14,6 @@ import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.{SoundEvents, SoundSource}
 import net.minecraft.tags.BlockTags
-import net.minecraft.util.RandomSource
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.*
 import net.minecraft.world.entity.ai.attributes.{AttributeSupplier, Attributes}
@@ -392,6 +391,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
 
   /**
    * Attempts to search for a block within a radius.
+   * TODO: Instead of fixed & random, consider nonlinear random + caching
    */
   private def bruteForceSearch(predicate: Function[BlockPos, Boolean]): Option[BlockPos] =
     this.blackboard.get(SPECIAL_KEYS.TARGET) match {

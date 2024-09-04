@@ -1,6 +1,7 @@
 package io.github.jugbot.entity.zone
 
 import io.github.jugbot.extension.AABB.*
+import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.entity.EntityTypeTest
@@ -14,34 +15,42 @@ import scala.jdk.CollectionConverters.ListHasAsScala
 object ZoneManager {
 
   // TODO: Efficient 3D range lookup?
-  def getZonesAt(level: Level,
-                 aabb: AABB,
-                 variant: Option[CollisionLayer] = Option.empty[CollisionLayer]
-  ): Array[ZoneEntity] =
+  def getZonesAt(level: Level, aabb: AABB, variant: Option[ZoneType] = Option.empty[ZoneType]): Array[ZoneEntity] =
     level
       .getEntities(
         EntityTypeTest.forClass(classOf[ZoneEntity]),
         aabb,
         (e: Entity) =>
           e match {
-            case zoneEntity: ZoneEntity => variant.isEmpty || zoneEntity.getCollisionLayer.eq(variant.get)
+            case zoneEntity: ZoneEntity => variant.isEmpty || zoneEntity.getZoneType.eq(variant.get)
             case _                      => false
           }
       )
       .asScala
       .toArray
 
-  def canFitAt(level: Level, bb: AABB, collisionLayer: CollisionLayer): Boolean = {
+  def canFitAt(level: Level, bb: AABB, collisionLayer: ZoneType): Boolean = {
     val aabb = bb.deflate(0.1) // Superstitiously avoid floating point errors
     val isNotColliding = getZonesAt(level, aabb, Option(collisionLayer)).isEmpty
-    val parentLayer = collisionLayer.parent
-    val isContainedProperly = parentLayer match {
-      case Some(layer) =>
-        getZonesAt(level, aabb, Option(layer))
-          .exists((e: ZoneEntity) => e.getBoundingBox.contains(aabb))
-      case None => true
-    }
+    val parentLayers = collisionLayer.validParents
+    val isContainedProperly = parentLayers.isEmpty || parentLayers.exists(layer =>
+      getZonesAt(level, aabb, Option(layer))
+        .exists((e: ZoneEntity) => e.getBoundingBox.contains(aabb))
+    )
 
     isNotColliding && isContainedProperly
+  }
+
+  def spawnWithAABB[Z <: ZoneEntity](level: Level, supplier: Function[Level, Z], aabb: AABB): Z = {
+    val zoneEntity = supplier(level)
+    zoneEntity.updateBounds(aabb)
+    level.addFreshEntity(zoneEntity)
+    zoneEntity
+  }
+
+  def spawnWithRadius[Z <: ZoneEntity](level: Level, supplier: Function[Level, Z], center: BlockPos, radius: Int): Z = {
+    val size = radius * 2 + 1
+    val aabb = AABB.ofSize(center.getCenter, size, size, size)
+    spawnWithAABB(level, supplier, aabb)
   }
 }
