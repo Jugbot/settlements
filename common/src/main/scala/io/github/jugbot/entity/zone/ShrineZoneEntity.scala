@@ -24,6 +24,7 @@ object ShrineZoneEntity {
   final val TYPE: Supplier[EntityType[ShrineZoneEntity]] = Suppliers.memoize(() =>
     EntityType.Builder
       .of[ShrineZoneEntity](new ShrineZoneEntity(_, _), MobCategory.MISC)
+      .sized(0, 0)
       .build("shrine_zone")
   )
 }

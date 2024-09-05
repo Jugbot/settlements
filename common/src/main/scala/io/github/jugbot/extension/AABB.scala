@@ -22,8 +22,8 @@ object AABB {
       aabb.minX.round.toInt,
       aabb.minY.round.toInt,
       aabb.minZ.round.toInt,
-      aabb.maxX.round.toInt,
-      aabb.maxY.round.toInt,
-      aabb.maxZ.round.toInt
+      aabb.maxX.round.toInt - 1,
+      aabb.maxY.round.toInt - 1,
+      aabb.maxZ.round.toInt - 1
     )
 }

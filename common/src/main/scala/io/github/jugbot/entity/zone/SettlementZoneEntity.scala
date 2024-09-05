@@ -38,6 +38,7 @@ object SettlementZoneEntity {
   final val TYPE: Supplier[EntityType[SettlementZoneEntity]] = Suppliers.memoize(() =>
     EntityType.Builder
       .of[SettlementZoneEntity](new SettlementZoneEntity(_, _), MobCategory.MISC)
+      .sized(0, 0)
       .build("settlement_zone")
   )
 }

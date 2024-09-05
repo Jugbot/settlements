@@ -29,8 +29,7 @@ class ShrineBlockItem extends BlockItem(ShrineBlock.INSTANCE, Item.Properties())
   override def canPlace(blockPlaceContext: BlockPlaceContext, blockState: BlockState): Boolean =
     val level = blockPlaceContext.getLevel
     val blockPos = blockPlaceContext.getClickedPos
-    val prospectiveSettlementBB =
-      SettlementZoneEntity.TYPE.get().getAABB(blockPos.getCenter.x, blockPos.getCenter.y, blockPos.getCenter.z)
+    val prospectiveSettlementBB = ZoneManager.aabbWithRadius(blockPos, SettlementZoneEntity.DEFAULT_RADIUS)
 
     val canPlaceSettlement = ZoneManager.canFitAt(level, prospectiveSettlementBB, ZoneType.Settlement)
 

@@ -16,14 +16,16 @@ object ZoneManager {
 
   // TODO: Efficient 3D range lookup?
   def getZonesAt(level: Level, aabb: AABB, variant: Option[ZoneType] = Option.empty[ZoneType]): Array[ZoneEntity] =
+    val veryLargeAABB = aabb.inflate(16 * 6) // HACK: The getEntities method is not precise with aabb lookup
     level
       .getEntities(
         EntityTypeTest.forClass(classOf[ZoneEntity]),
-        aabb,
+        veryLargeAABB,
         (e: Entity) =>
           e match {
-            case zoneEntity: ZoneEntity => variant.isEmpty || zoneEntity.getZoneType.eq(variant.get)
-            case _                      => false
+            case zoneEntity: ZoneEntity if aabb.intersects(zoneEntity.getBoundingBox) =>
+              variant.isEmpty || zoneEntity.getZoneType == variant.get
+            case _ => false
           }
       )
       .asScala
@@ -31,7 +33,8 @@ object ZoneManager {
 
   def canFitAt(level: Level, bb: AABB, collisionLayer: ZoneType): Boolean = {
     val aabb = bb.deflate(0.1) // Superstitiously avoid floating point errors
-    val isNotColliding = getZonesAt(level, aabb, Option(collisionLayer)).isEmpty
+    val collidingZones = getZonesAt(level, aabb, Option(collisionLayer))
+    val isNotColliding = collidingZones.isEmpty
     val parentLayers = collisionLayer.validParents
     val isContainedProperly = parentLayers.isEmpty || parentLayers.exists(layer =>
       getZonesAt(level, aabb, Option(layer))
@@ -48,9 +51,12 @@ object ZoneManager {
     zoneEntity
   }
 
-  def spawnWithRadius[Z <: ZoneEntity](level: Level, supplier: Function[Level, Z], center: BlockPos, radius: Int): Z = {
+  def aabbWithRadius(center: BlockPos, radius: Int) =
     val size = radius * 2 + 1
-    val aabb = AABB.ofSize(center.getCenter, size, size, size)
+    AABB.ofSize(center.getCenter, size, size, size)
+
+  def spawnWithRadius[Z <: ZoneEntity](level: Level, supplier: Function[Level, Z], center: BlockPos, radius: Int): Z = {
+    val aabb = aabbWithRadius(center, radius)
     spawnWithAABB(level, supplier, aabb)
   }
 }

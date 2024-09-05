@@ -66,7 +66,7 @@ object BoundingBox {
       corners.forall(bb.isInside)
     }
 
-    def toAABB: AABB = new AABB(bb.minX, bb.minY, bb.minZ, bb.maxX, bb.maxY, bb.maxZ)
+    def toAABB: AABB = new AABB(bb.minX, bb.minY, bb.minZ, bb.maxX + 1, bb.maxY + 1, bb.maxZ + 1)
   }
 }
 
