@@ -15,8 +15,9 @@ import scala.jdk.CollectionConverters.ListHasAsScala
 object ZoneManager {
 
   // TODO: Efficient 3D range lookup?
-  def getZonesAt(level: Level, aabb: AABB, variant: Option[ZoneType] = Option.empty[ZoneType]): Array[ZoneEntity] =
-    val veryLargeAABB = aabb.inflate(16 * 6) // HACK: The getEntities method is not precise with aabb lookup
+  def getZonesAt(level: Level, bb: AABB, variant: Option[ZoneType] = Option.empty[ZoneType]): Array[ZoneEntity] =
+    val veryLargeAABB = bb.inflate(16 * 6) // HACK: The getEntities method is not precise with aabb lookup
+    val aabb = bb.deflate(0.1) // Superstitiously avoid floating point errors
     level
       .getEntities(
         EntityTypeTest.forClass(classOf[ZoneEntity]),
@@ -31,8 +32,7 @@ object ZoneManager {
       .asScala
       .toArray
 
-  def canFitAt(level: Level, bb: AABB, collisionLayer: ZoneType): Boolean = {
-    val aabb = bb.deflate(0.1) // Superstitiously avoid floating point errors
+  def canFitAt(level: Level, aabb: AABB, collisionLayer: ZoneType): Boolean = {
     val collidingZones = getZonesAt(level, aabb, Option(collisionLayer))
     val isNotColliding = collidingZones.isEmpty
     val parentLayers = collisionLayer.validParents
@@ -44,6 +44,9 @@ object ZoneManager {
     isNotColliding && isContainedProperly
   }
 
+  def getConflicting(level: Level, aabb: AABB, collisionLayer: ZoneType): Array[ZoneEntity] =
+    getZonesAt(level, aabb, Option(collisionLayer))
+
   def spawnWithAABB[Z <: ZoneEntity](level: Level, supplier: Function[Level, Z], aabb: AABB): Z = {
     val zoneEntity = supplier(level)
     zoneEntity.updateBounds(aabb)
@@ -51,7 +54,7 @@ object ZoneManager {
     zoneEntity
   }
 
-  def aabbWithRadius(center: BlockPos, radius: Int) =
+  def aabbWithRadius(center: BlockPos, radius: Int): AABB =
     val size = radius * 2 + 1
     AABB.ofSize(center.getCenter, size, size, size)
 

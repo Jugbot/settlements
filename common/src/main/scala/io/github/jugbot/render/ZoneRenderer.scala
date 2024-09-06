@@ -20,7 +20,8 @@ class ZoneRenderer(context: EntityRendererProvider.Context)
   override def getTextureLocation(entity: ZoneEntity): ResourceLocation =
     null
 
-  override def shouldRender(entity: ZoneEntity, frustum: Frustum, d: Double, e: Double, f: Double): Boolean = GameInstance.getClient.getEntityRenderDispatcher.shouldRenderHitBoxes
+  override def shouldRender(entity: ZoneEntity, frustum: Frustum, d: Double, e: Double, f: Double): Boolean =
+    GameInstance.getClient.getEntityRenderDispatcher.shouldRenderHitBoxes
 
   override def render(entity: ZoneEntity,
                       f: Float,

@@ -2,7 +2,9 @@ package io.github.jugbot.item
 
 import io.github.jugbot.block.ShrineBlock
 import io.github.jugbot.entity.zone.{SettlementZoneEntity, ShrineZoneEntity, ZoneManager, ZoneType}
+import net.minecraft.network.chat.Component
 import net.minecraft.world.InteractionResult
+import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.item.{BlockItem, Item}
 import net.minecraft.world.level.block.state.BlockState
@@ -31,8 +33,17 @@ class ShrineBlockItem extends BlockItem(ShrineBlock.INSTANCE, Item.Properties())
     val blockPos = blockPlaceContext.getClickedPos
     val prospectiveSettlementBB = ZoneManager.aabbWithRadius(blockPos, SettlementZoneEntity.DEFAULT_RADIUS)
 
-    val canPlaceSettlement = ZoneManager.canFitAt(level, prospectiveSettlementBB, ZoneType.Settlement)
+    val conflictingSettlements = ZoneManager.getConflicting(level, prospectiveSettlementBB, ZoneType.Settlement)
 
     // TODO: Adopting orphaned settlement zone
-    super.canPlace(blockPlaceContext, blockState) && canPlaceSettlement
+    if super.canPlace(blockPlaceContext, blockState) then
+      blockPlaceContext.getPlayer match {
+        case player: Player if level.isClientSide =>
+          player.sendSystemMessage(
+            Component.translatable("block.settlements.shrine.overlapping", conflictingSettlements.head.position())
+          )
+        case _ =>
+      }
+      conflictingSettlements.isEmpty
+    else false
 }
