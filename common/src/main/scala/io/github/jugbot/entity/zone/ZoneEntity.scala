@@ -2,12 +2,16 @@ package io.github.jugbot.entity.zone
 
 import dev.architectury.extensions.network.EntitySpawnExtension
 import dev.architectury.networking.NetworkManager
+import io.github.jugbot.Mod
+import io.github.jugbot.extension.AABB.*
+import io.github.jugbot.extension.CompoundTag.{getEntities, putEntities}
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.network.protocol.Packet
 import net.minecraft.network.protocol.game.{ClientGamePacketListener, ClientboundAddEntityPacket}
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.damagesource.DamageSource
+import net.minecraft.world.entity.Entity.RemovalReason
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.{Entity, EntityType, LightningBolt}
 import net.minecraft.world.level.Level
@@ -16,9 +20,26 @@ import net.minecraft.world.level.material.PushReaction
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.{InteractionHand, InteractionResult}
 
+import scala.collection.mutable
+import scala.jdk.CollectionConverters.CollectionHasAsScala
+
 abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     extends Entity(entityType, world)
     with EntitySpawnExtension {
+
+  private var parentZone: Option[ZoneEntity] = None
+
+  def getParentZone: Option[ZoneEntity] = parentZone
+
+  private var childZones: mutable.Set[ZoneEntity] = mutable.Set.empty
+
+  def getChildZones: Set[ZoneEntity] = Set.empty ++ childZones
+
+  private def linkChild(childZone: ZoneEntity): Unit = {
+    childZones.add(childZone)
+    childZone.parentZone = Some(this)
+  }
+
   def getZoneType: ZoneType
 
   def updateBounds(aabb: AABB): Unit = {
@@ -40,6 +61,25 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     val maxY = compoundTag.getDouble("maxY")
     val maxZ = compoundTag.getDouble("maxZ")
     updateBounds(AABB(minX, minY, minZ, maxX, maxY, maxZ))
+
+    childZones = mutable.Set.empty ++= (
+      compoundTag.getEntities(
+        "children",
+        uuid =>
+          level match {
+            case level: ServerLevel => Some(level.getEntity(uuid))
+            case level =>
+              level
+                .getEntitiesOfClass[ZoneEntity](classOf[ZoneEntity],
+                                                getBoundingBox,
+                                                (e: ZoneEntity) => e.getUUID == uuid
+                )
+                .asScala
+                .headOption
+          }
+      )
+    )
+    childZones.foreach(_.parentZone = Some(this))
   }
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {
@@ -50,6 +90,8 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     compoundTag.putDouble("maxX", bb.maxX)
     compoundTag.putDouble("maxY", bb.maxY)
     compoundTag.putDouble("maxZ", bb.maxZ)
+
+    compoundTag.putEntities("children", getChildZones)
   }
 
   override def defineSynchedData(): Unit = {}
@@ -67,6 +109,8 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     xo = getX
     yo = getY
     zo = getZ
+
+    if parentZone.exists(_.isRemoved) then remove(RemovalReason.DISCARDED)
   }
 
   override def interact(player: Player, interactionHand: InteractionHand): InteractionResult = InteractionResult.PASS
@@ -86,6 +130,8 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
   override def getPistonPushReaction: PushReaction = PushReaction.IGNORE
 
   override def canChangeDimensions: Boolean = false
+
+  override def remove(removalReason: RemovalReason): Unit = super.remove(removalReason)
 
   /**
    * In order to resolve the issue of the game client not knowing the dynamic bounding box size set during initialization, we can sneak that data in place of the delta movement.
@@ -111,5 +157,47 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     val maxY = buf.readDouble()
     val maxZ = buf.readDouble()
     updateBounds(AABB(minX, minY, minZ, maxX, maxY, maxZ))
+  }
+}
+
+object ZoneEntity {
+  private def validate(zone: ZoneEntity, parentZone: Option[ZoneEntity] = None): Either[String, Unit] =
+    if zone.getZoneType.validParents.nonEmpty && !parentZone.exists(z =>
+        zone.getZoneType.validParents.apply(z.getZoneType)
+      )
+    then Left("Attempted to create a zone without its parent")
+    else if parentZone.isDefined && !parentZone.get.getBoundingBox.contains(zone.getBoundingBox) then
+      Left("Attempted to create a child zone outside of parent zone")
+    else if ZoneManager.getConflicting(zone.level, zone.getBoundingBox, zone.getZoneType).nonEmpty then
+      Left("Attempted to create a zone in a conflicting area")
+    else Right(())
+
+  def makeZone(entityType: EntityType[? <: ZoneEntity], level: Level, aabb: AABB) = {
+    val zone = entityType.create(level)
+    zone.updateBounds(aabb)
+    validate(zone) match {
+      case Left(msg) =>
+        Mod.LOGGER.error(msg)
+        zone.discard()
+        None
+      case Right(_) =>
+        level.addFreshEntity(zone)
+        Some(zone)
+    }
+  }
+
+  def makeChildZone(parent: ZoneEntity, entityType: EntityType[? <: ZoneEntity], aabb: AABB): Option[ZoneEntity] = {
+    val zone = entityType.create(parent.level)
+    zone.updateBounds(aabb)
+    validate(zone, Some(parent)) match {
+      case Left(msg) =>
+        Mod.LOGGER.error(msg)
+        zone.discard()
+        None
+      case Right(_) =>
+        parent.linkChild(zone)
+        parent.level.addFreshEntity(zone)
+        Some(zone)
+    }
   }
 }

@@ -2,12 +2,14 @@ package io.github.jugbot.item
 
 import io.github.jugbot.block.ShrineBlock
 import io.github.jugbot.entity.zone.{SettlementZoneEntity, ShrineZoneEntity, ZoneManager, ZoneType}
+import io.github.jugbot.extension.AABB.withRadius
 import net.minecraft.network.chat.Component
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.item.{BlockItem, Item}
 import net.minecraft.world.level.block.state.BlockState
+import io.github.jugbot.entity.zone.ZoneEntity
 
 class ShrineBlockItem extends BlockItem(ShrineBlock.INSTANCE, Item.Properties()) {
 
@@ -16,29 +18,31 @@ class ShrineBlockItem extends BlockItem(ShrineBlock.INSTANCE, Item.Properties())
     val level = blockPlaceContext.getLevel
     if result.consumesAction() then
       val blockPos = blockPlaceContext.getClickedPos
-      ZoneManager.spawnWithRadius(level,
-                                  SettlementZoneEntity(SettlementZoneEntity.TYPE.get, _),
-                                  blockPos,
-                                  SettlementZoneEntity.DEFAULT_RADIUS
+      val settlementZone = ZoneEntity.makeZone(SettlementZoneEntity.TYPE.get,
+                                               level,
+                                               withRadius(blockPos, SettlementZoneEntity.DEFAULT_RADIUS)
       )
-      ZoneManager.spawnWithRadius(level,
-                                  ShrineZoneEntity(ShrineZoneEntity.TYPE.get, _),
-                                  blockPos,
-                                  ShrineZoneEntity.DEFAULT_RADIUS
+      val shrineZone = settlementZone.flatMap(zone =>
+        ZoneEntity.makeChildZone(zone, ShrineZoneEntity.TYPE.get, withRadius(blockPos, ShrineZoneEntity.DEFAULT_RADIUS))
       )
+      if settlementZone.isEmpty || shrineZone.isEmpty then
+        level.removeBlock(blockPos, false)
+        settlementZone.foreach(_.discard())
+        shrineZone.foreach(_.discard())
+        return InteractionResult.FAIL
     result
 
   override def canPlace(blockPlaceContext: BlockPlaceContext, blockState: BlockState): Boolean =
     val level = blockPlaceContext.getLevel
     val blockPos = blockPlaceContext.getClickedPos
-    val prospectiveSettlementBB = ZoneManager.aabbWithRadius(blockPos, SettlementZoneEntity.DEFAULT_RADIUS)
+    val prospectiveSettlementBB = withRadius(blockPos.getCenter, SettlementZoneEntity.DEFAULT_RADIUS)
 
     val conflictingSettlements = ZoneManager.getConflicting(level, prospectiveSettlementBB, ZoneType.Settlement)
 
     // TODO: Adopting orphaned settlement zone
     if super.canPlace(blockPlaceContext, blockState) then
       blockPlaceContext.getPlayer match {
-        case player: Player if level.isClientSide =>
+        case player: Player if player.isLocalPlayer && conflictingSettlements.nonEmpty =>
           player.sendSystemMessage(
             Component.translatable("block.settlements.shrine.overlapping", conflictingSettlements.head.position())
           )

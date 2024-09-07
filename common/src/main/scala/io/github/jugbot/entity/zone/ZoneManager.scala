@@ -32,34 +32,25 @@ object ZoneManager {
       .asScala
       .toArray
 
+  /** Checks aabb is contained in parent and doesn't overlap siblings */
   def canFitAt(level: Level, aabb: AABB, collisionLayer: ZoneType): Boolean = {
-    val collidingZones = getZonesAt(level, aabb, Option(collisionLayer))
+    val collidingZones = getConflicting(level, aabb, collisionLayer)
     val isNotColliding = collidingZones.isEmpty
     val parentLayers = collisionLayer.validParents
-    val isContainedProperly = parentLayers.isEmpty || parentLayers.exists(layer =>
-      getZonesAt(level, aabb, Option(layer))
-        .exists((e: ZoneEntity) => e.getBoundingBox.contains(aabb))
-    )
+    val isContainedProperly = parentLayers.isEmpty || getParents(level, aabb, collisionLayer).nonEmpty
 
     isNotColliding && isContainedProperly
   }
 
+  /** Get parents that contain aabb and are of the parent ZoneType */
+  def getParents(level: Level, aabb: AABB, collisionLayer: ZoneType) =
+    val parentLayers = collisionLayer.validParents
+    parentLayers.flatMap(layer =>
+      getZonesAt(level, aabb, Option(layer))
+        .filter((e: ZoneEntity) => e.getBoundingBox.contains(aabb))
+    )
+
+  /** Returns overlapping siblings */
   def getConflicting(level: Level, aabb: AABB, collisionLayer: ZoneType): Array[ZoneEntity] =
     getZonesAt(level, aabb, Option(collisionLayer))
-
-  def spawnWithAABB[Z <: ZoneEntity](level: Level, supplier: Function[Level, Z], aabb: AABB): Z = {
-    val zoneEntity = supplier(level)
-    zoneEntity.updateBounds(aabb)
-    level.addFreshEntity(zoneEntity)
-    zoneEntity
-  }
-
-  def aabbWithRadius(center: BlockPos, radius: Int): AABB =
-    val size = radius * 2 + 1
-    AABB.ofSize(center.getCenter, size, size, size)
-
-  def spawnWithRadius[Z <: ZoneEntity](level: Level, supplier: Function[Level, Z], center: BlockPos, radius: Int): Z = {
-    val aabb = aabbWithRadius(center, radius)
-    spawnWithAABB(level, supplier, aabb)
-  }
 }
