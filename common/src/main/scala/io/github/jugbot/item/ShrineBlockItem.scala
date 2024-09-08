@@ -1,7 +1,7 @@
 package io.github.jugbot.item
 
 import io.github.jugbot.block.ShrineBlock
-import io.github.jugbot.entity.zone.{SettlementZoneEntity, ShrineZoneEntity, ZoneManager, ZoneType}
+import io.github.jugbot.entity.zone.*
 import io.github.jugbot.extension.AABB.withRadius
 import net.minecraft.network.chat.Component
 import net.minecraft.world.InteractionResult
@@ -9,7 +9,6 @@ import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.context.BlockPlaceContext
 import net.minecraft.world.item.{BlockItem, Item}
 import net.minecraft.world.level.block.state.BlockState
-import io.github.jugbot.entity.zone.ZoneEntity
 
 class ShrineBlockItem extends BlockItem(ShrineBlock.INSTANCE, Item.Properties()) {
 

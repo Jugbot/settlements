@@ -3,7 +3,7 @@ package io.github.jugbot.blockentity
 import com.google.common.base.Suppliers
 import io.github.jugbot.block.ShrineBlock
 import io.github.jugbot.entity.zone.ShrineZoneEntity
-import io.github.jugbot.extension.CompoundTag.{getUUIDS, putUUIDS}
+import io.github.jugbot.extension.CompoundTag.{getUUIDs, putUUIDs}
 import io.github.jugbot.util.{memoizedValue, BlockStateRequirement}
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.CompoundTag
@@ -55,12 +55,12 @@ class ShrineBlockEntity(pos: BlockPos, state: BlockState)
   override def load(compoundTag: CompoundTag): Unit =
     super.load(compoundTag)
     tier = compoundTag.getInt(TAG_TIER)
-    owners = mutable.Set.empty ++= (compoundTag.getUUIDS(TAG_OWNERS))
+    owners = mutable.Set.empty ++= (compoundTag.getUUIDs(TAG_OWNERS))
 
   override def saveAdditional(compoundTag: CompoundTag): Unit = {
     super.saveAdditional(compoundTag)
     compoundTag.putInt(TAG_TIER, tier)
-    compoundTag.putUUIDS(TAG_OWNERS, owners)
+    compoundTag.putUUIDs(TAG_OWNERS, owners)
   }
 
 }

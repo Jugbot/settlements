@@ -30,7 +30,6 @@ class ShrineZoneEntity(entityType: EntityType[ShrineZoneEntity], world: Level) e
     super.tick()
     val centerBlock = this.getBoundingBox.toBoundingBox.getCenter
     if !level.getBlockState(centerBlock).getBlock.isInstanceOf[ShrineBlock] then this.discard()
-
   }
 }
 

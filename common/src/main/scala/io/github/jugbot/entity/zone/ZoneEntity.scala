@@ -4,7 +4,7 @@ import dev.architectury.extensions.network.EntitySpawnExtension
 import dev.architectury.networking.NetworkManager
 import io.github.jugbot.Mod
 import io.github.jugbot.extension.AABB.*
-import io.github.jugbot.extension.CompoundTag.{getEntities, putEntities}
+import io.github.jugbot.extension.CompoundTag.putEntities
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.network.protocol.Packet
@@ -20,25 +20,19 @@ import net.minecraft.world.level.material.PushReaction
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.{InteractionHand, InteractionResult}
 
-import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     extends Entity(entityType, world)
     with EntitySpawnExtension {
 
-  private var parentZone: Option[ZoneEntity] = None
+  def getParentZone: Option[ZoneEntity] = Option(this.getVehicle).map(_.asInstanceOf[ZoneEntity])
 
-  def getParentZone: Option[ZoneEntity] = parentZone
+  def getChildZones: Set[ZoneEntity] =
+    Set.from(this.getPassengers.asScala).map((e: Entity) => e.asInstanceOf[ZoneEntity])
 
-  private var childZones: mutable.Set[ZoneEntity] = mutable.Set.empty
-
-  def getChildZones: Set[ZoneEntity] = Set.empty ++ childZones
-
-  private def linkChild(childZone: ZoneEntity): Unit = {
-    childZones.add(childZone)
-    childZone.parentZone = Some(this)
-  }
+  def linkChild(childZone: ZoneEntity): Unit =
+    childZone.startRiding(this)
 
   def getZoneType: ZoneType
 
@@ -46,6 +40,25 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     setBoundingBox(aabb)
     setPosRaw(aabb.getCenter.x, aabb.getCenter.y, aabb.getCenter.z);
   }
+
+  override def canRide(entity: Entity): Boolean = entity match {
+    case zone: ZoneEntity => zone.getZoneType.validChildren.contains(getZoneType)
+    case _                => false
+  }
+
+  override def canAddPassenger(entity: Entity): Boolean = entity match {
+    case zone: ZoneEntity => zone.getZoneType.validParents.contains(getZoneType)
+    case _                => false
+  }
+
+  /** Discard self when unmounted from parent for whatever reason */
+  override def stopRiding(): Unit =
+    if isPassenger then
+      super.stopRiding()
+      discard()
+    else super.stopRiding()
+
+  override def positionRider(entity: Entity, moveFunction: Entity.MoveFunction): Unit = ()
 
   override def setPos(x: Double, y: Double, z: Double): Unit =
     updateBounds(getBoundingBox.move(x - getX, y - getY, z - getZ))
@@ -61,25 +74,6 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     val maxY = compoundTag.getDouble("maxY")
     val maxZ = compoundTag.getDouble("maxZ")
     updateBounds(AABB(minX, minY, minZ, maxX, maxY, maxZ))
-
-    childZones = mutable.Set.empty ++= (
-      compoundTag.getEntities(
-        "children",
-        uuid =>
-          level match {
-            case level: ServerLevel => Some(level.getEntity(uuid))
-            case level =>
-              level
-                .getEntitiesOfClass[ZoneEntity](classOf[ZoneEntity],
-                                                getBoundingBox,
-                                                (e: ZoneEntity) => e.getUUID == uuid
-                )
-                .asScala
-                .headOption
-          }
-      )
-    )
-    childZones.foreach(_.parentZone = Some(this))
   }
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {
@@ -90,13 +84,9 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     compoundTag.putDouble("maxX", bb.maxX)
     compoundTag.putDouble("maxY", bb.maxY)
     compoundTag.putDouble("maxZ", bb.maxZ)
-
-    compoundTag.putEntities("children", getChildZones)
   }
 
   override def defineSynchedData(): Unit = {}
-
-  override def canAddPassenger(entity: Entity): Boolean = false
 
   override def canCollideWith(entity: Entity): Boolean = false
 
@@ -109,8 +99,6 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     xo = getX
     yo = getY
     zo = getZ
-
-    if parentZone.exists(_.isRemoved) then remove(RemovalReason.DISCARDED)
   }
 
   override def interact(player: Player, interactionHand: InteractionHand): InteractionResult = InteractionResult.PASS
@@ -133,10 +121,14 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
 
   override def remove(removalReason: RemovalReason): Unit = super.remove(removalReason)
 
+  /** Offset is for if zones share the same center */
+  override def getNameTagOffsetY: Float = getZoneType.ordinal * 0.2f
+
   /**
    * In order to resolve the issue of the game client not knowing the dynamic bounding box size set during initialization, we can sneak that data in place of the delta movement.
    */
   override def getAddEntityPacket: Packet[ClientGamePacketListener] = NetworkManager.createAddEntityPacket(this)
+
   override def recreateFromPacket(clientboundAddEntityPacket: ClientboundAddEntityPacket): Unit =
     super.recreateFromPacket(clientboundAddEntityPacket)
 
@@ -195,8 +187,8 @@ object ZoneEntity {
         zone.discard()
         None
       case Right(_) =>
-        parent.linkChild(zone)
         parent.level.addFreshEntity(zone)
+        parent.linkChild(zone)
         Some(zone)
     }
   }

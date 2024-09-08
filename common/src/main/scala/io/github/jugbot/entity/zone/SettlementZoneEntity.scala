@@ -4,7 +4,8 @@ import com.google.common.base.Suppliers
 import io.github.jugbot.blockentity.ShrineBlockEntity
 import io.github.jugbot.entity.FaeEntity
 import io.github.jugbot.extension.AABB.*
-import io.github.jugbot.extension.CompoundTag.{getEntities, putEntities}
+import io.github.jugbot.extension.CompoundTag.*
+import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.server.level.ServerLevel
@@ -14,12 +15,14 @@ import net.minecraft.world.level.Level
 import java.util.UUID
 import java.util.function.Supplier
 import scala.collection.mutable
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: Level)
     extends ZoneEntity(entityType, world) {
   override def getZoneType: ZoneType = ZoneType.Settlement
 
-  val settlers = mutable.Stack.empty[FaeEntity]
+  // TODO: Refactor to use passenger pattern
+  val settlers = mutable.ListBuffer.empty[UUID]
 
   def getShrineZone: Option[ShrineZoneEntity] =
     getChildZones.find(_.isInstanceOf[ShrineZoneEntity]).map(_.asInstanceOf[ShrineZoneEntity])
@@ -46,40 +49,47 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
   private def spawnSettler(): Unit =
     (this.level, getSpawnPosition) match {
       case (serverLevel: ServerLevel, Some(spawnPos)) =>
-        settlers.push(FaeEntity.TYPE.get.spawn(serverLevel, spawnPos, MobSpawnType.MOB_SUMMONED))
+        settlers.addOne(FaeEntity.TYPE.get.spawn(serverLevel, spawnPos, MobSpawnType.MOB_SUMMONED).getUUID)
       case _ =>
     }
 
   // TODO: Soft despawn to avoid dropping items
   private def despawnSettler(): Unit =
-    if settlers.nonEmpty then settlers.pop().kill()
+    if settlers.nonEmpty then getEntity(settlers.last).map(_.kill)
+
+  private def getEntity(uuid: UUID): Option[FaeEntity] = level match {
+    case serverLevel: ServerLevel => Option(serverLevel.getEntity(uuid)).map(_.asInstanceOf[FaeEntity])
+    case clientLevel: ClientLevel =>
+      clientLevel
+        .getEntitiesOfClass(classOf[FaeEntity], getBoundingBox, (e: FaeEntity) => e.getUUID == uuid)
+        .asScala
+        .headOption
+    case _ => None
+  }
+
+  private def removeStaleSettlers(): Unit =
+    settlers.filterInPlace(getEntity(_).exists(_.isAlive))
 
   override def tick(): Unit =
     super.tick()
     if settlers.size < getMaxSettlers then spawnSettler()
     else if settlers.size > getMaxSettlers then despawnSettler()
+    // TODO: Fix tick before passenger can be added
+    if !getShrineZone.exists(_.isAlive) && !level.isClientSide then discard()
+    removeStaleSettlers()
 
   override def remove(removalReason: Entity.RemovalReason): Unit =
     super.remove(removalReason)
-    settlers.foreach(_.kill())
+    settlers.foreach(getEntity(_).map(_.kill))
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit =
     super.addAdditionalSaveData(compoundTag)
-    compoundTag.putEntities("settlers", settlers)
+    compoundTag.putUUIDs("settlers", settlers)
 
   override def readAdditionalSaveData(compoundTag: CompoundTag): Unit =
     super.readAdditionalSaveData(compoundTag)
     settlers.clear()
-    compoundTag
-      .getEntities[FaeEntity]("settlers",
-                              uuid =>
-                                level match {
-                                  // TODO: Won't be synced client side?
-                                  case serverLevel: ServerLevel => Some(serverLevel.getEntity(uuid))
-                                  case _                        => None
-                                }
-      )
-      .foreach(settlers.push)
+    settlers ++= compoundTag.getUUIDs("settlers")
 }
 
 object SettlementZoneEntity {
