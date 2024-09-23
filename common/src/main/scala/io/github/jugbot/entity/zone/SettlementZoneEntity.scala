@@ -2,7 +2,7 @@ package io.github.jugbot.entity.zone
 
 import com.google.common.base.Suppliers
 import io.github.jugbot.blockentity.ShrineBlockEntity
-import io.github.jugbot.entity.FaeEntity
+import io.github.jugbot.entity.{FaeEntity, Owning}
 import io.github.jugbot.extension.AABB.*
 import io.github.jugbot.extension.CompoundTag.*
 import net.minecraft.client.multiplayer.ClientLevel
@@ -14,15 +14,16 @@ import net.minecraft.world.level.Level
 
 import java.util.UUID
 import java.util.function.Supplier
-import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: Level)
-    extends ZoneEntity(entityType, world) {
+    extends ZoneEntity(entityType, world)
+    with Owning[SettlementZoneEntity, FaeEntity]("Settlers") {
+
   override def getZoneType: ZoneType = ZoneType.Settlement
 
-  // TODO: Refactor to use passenger pattern
-  val settlers = mutable.ListBuffer.empty[UUID]
+  def settlers: Set[FaeEntity] = children
+  val addSettler = addChild _
 
   def getShrineZone: Option[ShrineZoneEntity] =
     getChildZones.find(_.isInstanceOf[ShrineZoneEntity]).map(_.asInstanceOf[ShrineZoneEntity])
@@ -33,8 +34,8 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
     getShrine match {
       case Some(shrine) =>
         shrine.tier match {
-          case 0 => 5
-          case 1 => 10
+          case 0 => 1
+          case 1 => 2
           case 2 => 15
           case 3 => 20
           case _ => 0
@@ -49,13 +50,13 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
   private def spawnSettler(): Unit =
     (this.level, getSpawnPosition) match {
       case (serverLevel: ServerLevel, Some(spawnPos)) =>
-        settlers.addOne(FaeEntity.TYPE.get.spawn(serverLevel, spawnPos, MobSpawnType.MOB_SUMMONED).getUUID)
+        addSettler(FaeEntity.TYPE.get.spawn(serverLevel, spawnPos, MobSpawnType.MOB_SUMMONED))
       case _ =>
     }
 
   // TODO: Soft despawn to avoid dropping items
   private def despawnSettler(): Unit =
-    if settlers.nonEmpty then getEntity(settlers.last).map(_.kill)
+    if settlers.nonEmpty then settlers.last.kill()
 
   private def getEntity(uuid: UUID): Option[FaeEntity] = level match {
     case serverLevel: ServerLevel => Option(serverLevel.getEntity(uuid)).map(_.asInstanceOf[FaeEntity])
@@ -68,7 +69,7 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
   }
 
   private def removeStaleSettlers(): Unit =
-    settlers.filterInPlace(getEntity(_).exists(_.isAlive))
+    children = settlers.filter(_.isAlive)
 
   override def tick(): Unit =
     super.tick()
@@ -80,16 +81,13 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
 
   override def remove(removalReason: Entity.RemovalReason): Unit =
     super.remove(removalReason)
-    settlers.foreach(getEntity(_).map(_.kill))
+    settlers.foreach(_.kill)
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit =
     super.addAdditionalSaveData(compoundTag)
-    compoundTag.putUUIDs("settlers", settlers)
 
   override def readAdditionalSaveData(compoundTag: CompoundTag): Unit =
     super.readAdditionalSaveData(compoundTag)
-    settlers.clear()
-    settlers ++= compoundTag.getUUIDs("settlers")
 }
 
 object SettlementZoneEntity {

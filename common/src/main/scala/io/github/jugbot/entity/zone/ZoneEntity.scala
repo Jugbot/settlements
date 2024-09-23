@@ -4,7 +4,6 @@ import dev.architectury.extensions.network.EntitySpawnExtension
 import dev.architectury.networking.NetworkManager
 import io.github.jugbot.Mod
 import io.github.jugbot.extension.AABB.*
-import io.github.jugbot.extension.CompoundTag.putEntities
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.network.protocol.Packet
@@ -30,6 +29,8 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
 
   def getChildZones: Set[ZoneEntity] =
     Set.from(this.getPassengers.asScala).map((e: Entity) => e.asInstanceOf[ZoneEntity])
+
+  def getRootZone: ZoneEntity = this.getRootVehicle.asInstanceOf[ZoneEntity]
 
   def linkChild(childZone: ZoneEntity): Unit =
     childZone.startRiding(this)
