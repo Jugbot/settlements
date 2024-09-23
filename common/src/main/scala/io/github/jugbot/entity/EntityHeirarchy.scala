@@ -13,15 +13,9 @@ import scala.jdk.OptionConverters.RichOptional
  * @see PersistentEntitySectionManager.class
  */
 
-private trait WithChildren[C <: Entity] extends Entity {
+trait Owning[P <: Owning[P, C], C <: OwnedBy[P, C]](val childTag: String) extends Entity { self: P =>
   var children: Set[C] = Set.empty
-}
 
-private trait WithParent[P <: Entity] extends Entity {
-  var parent: Option[P] = None
-}
-
-trait Owning[P <: WithChildren[C], C <: WithParent[P]](val childTag: String) extends WithChildren[C] { self: P =>
   def addChild(child: C): Unit = {
     children += child
     child.parent = Some(self)
@@ -55,7 +49,9 @@ trait Owning[P <: WithChildren[C], C <: WithParent[P]](val childTag: String) ext
     }
 }
 
-trait OwnedBy[P <: WithChildren[C], C <: WithParent[P]] extends WithParent[P] {
+trait OwnedBy[P <: Owning[P, C], C <: OwnedBy[P, C]] extends Entity { self: C =>
+  var parent: Option[P] = None
+
   override def shouldBeSaved(): Boolean =
     parent.isEmpty && super.shouldBeSaved()
 

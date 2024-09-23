@@ -3,8 +3,6 @@ package io.github.jugbot.entity.zone
 import com.google.common.base.Suppliers
 import io.github.jugbot.blockentity.ShrineBlockEntity
 import io.github.jugbot.entity.{FaeEntity, Owning}
-import io.github.jugbot.extension.AABB.*
-import io.github.jugbot.extension.CompoundTag.*
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.CompoundTag
@@ -42,8 +40,6 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
         }
       case None => 0
     }
-
-  def isOwnedBy(playerUUID: UUID): Boolean = getShrine.exists(_.owners.contains(playerUUID))
 
   private def getSpawnPosition: Option[BlockPos] = getShrine.map(_.getBlockPos)
 
