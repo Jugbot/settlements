@@ -126,31 +126,24 @@ trait EntityHeirarchy[Self <: EntityHeirarchy[Self]](nbtTagName: String) extends
     child.parent = None
   }
 
-  def setParent(parent: Self): Unit = {
+  def setParent(parent: Self): Unit =
     parent.addChild(this)
-  }
 
-  def removeParent(): Unit = {
+  def removeParent(): Unit =
     parent.foreach(_.removeChild(this))
-  }
 
-  def removeChildren(): Unit = {
-    for { child <- this.children } {
+  def removeChildren(): Unit =
+    for { child <- this.children }
       this.removeChild(child)
-    }
-  }
 
-  def addChildren(children: Set[Self]): Unit = {
-    for { child <- children } {
+  def addChildren(children: Set[Self]): Unit =
+    for { child <- children }
       this.addChild(child)
-    }
-  }
 
   def setChildren(children: Set[Self]): Unit = {
     this.removeChildren()
     this.addChildren(children)
   }
-
 
   override def shouldBeSaved(): Boolean =
     parent.isEmpty && super.shouldBeSaved()
