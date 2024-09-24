@@ -3,6 +3,8 @@ package io.github.jugbot.entity
 import com.google.common.base.Suppliers
 import io.github.jugbot.ai.*
 import io.github.jugbot.ai.tree.{FaeBehavior, FaeBehaviorTree}
+import io.github.jugbot.extension.AABB.*
+import io.github.jugbot.extension.BoundingBox.*
 import io.github.jugbot.extension.Container.*
 import io.github.jugbot.extension.Container.Query.*
 import io.github.jugbot.util.{blockPredicate, itemPredicate}
@@ -14,7 +16,6 @@ import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.{SoundEvents, SoundSource}
 import net.minecraft.tags.BlockTags
-import net.minecraft.util.RandomSource
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.*
 import net.minecraft.world.entity.ai.attributes.{AttributeSupplier, Attributes}
@@ -33,13 +34,15 @@ import net.minecraft.world.{InteractionHand, InteractionResult}
 
 import java.util.function.Supplier
 import scala.collection.mutable
-import scala.jdk.CollectionConverters.{CollectionHasAsScala, IterableHasAsScala}
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.OptionConverters.RichOptional
+import io.github.jugbot.entity.zone.SettlementZoneEntity
 
 class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
-    extends Mob(entityType: EntityType[FaeEntity], world: Level)
+    extends Mob(entityType, world)
     with ExtraInventory
-    with Hunger {
+    with Hunger
+    with WithParent[FaeEntity, SettlementZoneEntity] {
 
   override def isPushable: Boolean = false
 
@@ -72,14 +75,14 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
 
   private def debugWrapper(name: String, args: Map[String, String]): BehaviorStatus =
     val profiler = this.level().getProfiler
-    profiler.push(name)
-    val result = performBehavior(name, args)
+    val behavior = FaeBehavior.valueOf(name, args).get
+    profiler.push(behavior.toString)
+    val result = performBehavior(behavior)
     profiler.pop()
     result
 
-  private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
-    val maybeBehavior = FaeBehavior.valueOf(name, args)
-    maybeBehavior.get match {
+  private def performBehavior(behavior: FaeBehavior): BehaviorStatus =
+    behavior match {
       case FaeBehavior.unknown() =>
         throw new Exception(
           "Encountered an unknown behavior. There is likely a problem with your config. See warnings above."
@@ -370,6 +373,8 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     }
   }
 
+  private def settlementZone = parent
+
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {
     super.addAdditionalSaveData(compoundTag)
     blackboard.get(SPECIAL_KEYS.BED_POSITION).foreach {
@@ -392,6 +397,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
 
   /**
    * Attempts to search for a block within a radius.
+   * TODO: Instead of fixed & random, consider nonlinear random + caching
    */
   private def bruteForceSearch(predicate: Function[BlockPos, Boolean]): Option[BlockPos] =
     this.blackboard.get(SPECIAL_KEYS.TARGET) match {
@@ -401,25 +407,9 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
       case _ =>
         // Check adjacent blocks first, then do a limited random search in a large area
         // The adjacent search should not go beyond the navigation termination distance otherwise the pathfinding could get stuck on a bad target
-        BlockPos
-          .findClosestMatch(this.blockPosition,
-                            FaeEntity.NAVIGATION_PROXIMITY,
-                            FaeEntity.NAVIGATION_PROXIMITY,
-                            bp => predicate(bp)
-          )
-          .toScala
-          .orElse(
-            BlockPos
-              .randomInCube(
-                this.random,
-                FaeEntity.BRUTE_FORCE_SEARCH_ATTEMPTS,
-                this.blockPosition,
-                FaeEntity.BRUTE_FORCE_SEARCH_RADIUS
-              )
-              .asScala
-              .find((bp: BlockPos) => predicate(bp))
-          )
-
+        settlementZone.flatMap(
+          _.getBoundingBox.toBoundingBox.closestCoordinatesInside(this.blockPosition).map(BlockPos(_)).find(predicate)
+        )
     }
 }
 

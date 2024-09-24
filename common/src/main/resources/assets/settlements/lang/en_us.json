@@ -1,4 +1,5 @@
 {
   "block.settlements.shrine": "Shrine",
+  "block.settlements.shrine.overlapping": "Cannot create a new settlement here, it is too close to an existing one at %s",
   "entity.settlements.fae": "Fae"
 }
