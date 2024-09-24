@@ -1,7 +1,6 @@
 package io.github.jugbot.entity.zone
 
 import io.github.jugbot.extension.AABB.*
-import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.entity.EntityTypeTest
@@ -32,25 +31,10 @@ object ZoneManager {
       .asScala
       .toArray
 
-  /** Checks aabb is contained in parent and doesn't overlap siblings */
-  def canFitAt(level: Level, aabb: AABB, collisionLayer: ZoneType): Boolean = {
-    val collidingZones = getConflicting(level, aabb, collisionLayer)
-    val isNotColliding = collidingZones.isEmpty
-    val parentLayers = collisionLayer.validParents
-    val isContainedProperly = parentLayers.isEmpty || getParents(level, aabb, collisionLayer).nonEmpty
-
-    isNotColliding && isContainedProperly
-  }
-
-  /** Get parents that contain aabb and are of the parent ZoneType */
-  def getParents(level: Level, aabb: AABB, collisionLayer: ZoneType) =
-    val parentLayers = collisionLayer.validParents
-    parentLayers.flatMap(layer =>
-      getZonesAt(level, aabb, Option(layer))
-        .filter((e: ZoneEntity) => e.getBoundingBox.contains(aabb))
-    )
-
   /** Returns overlapping siblings */
+  def getConflicting(level: Level, aabb: AABB, zone: ZoneEntity): Array[ZoneEntity] =
+    getConflicting(level, aabb, zone.getZoneType).filterNot(_ == zone)
+
   def getConflicting(level: Level, aabb: AABB, collisionLayer: ZoneType): Array[ZoneEntity] =
     getZonesAt(level, aabb, Option(collisionLayer))
 }

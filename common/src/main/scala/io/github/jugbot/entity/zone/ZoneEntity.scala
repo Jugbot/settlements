@@ -3,6 +3,7 @@ package io.github.jugbot.entity.zone
 import dev.architectury.extensions.network.EntitySpawnExtension
 import dev.architectury.networking.NetworkManager
 import io.github.jugbot.Mod
+import io.github.jugbot.entity.{WithChildren, WithParent}
 import io.github.jugbot.extension.AABB.*
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.FriendlyByteBuf
@@ -19,21 +20,15 @@ import net.minecraft.world.level.material.PushReaction
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.{InteractionHand, InteractionResult}
 
-import scala.jdk.CollectionConverters.CollectionHasAsScala
-
 abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     extends Entity(entityType, world)
-    with EntitySpawnExtension {
+    with EntitySpawnExtension
+    with WithChildren[ZoneEntity, ZoneEntity]("SubZones")
+    with WithParent[ZoneEntity, ZoneEntity] {
 
-  def getParentZone: Option[ZoneEntity] = Option(this.getVehicle).map(_.asInstanceOf[ZoneEntity])
+  def getParentZone: Option[ZoneEntity] = this.parent
 
-  def getChildZones: Set[ZoneEntity] =
-    Set.from(this.getPassengers.asScala).map((e: Entity) => e.asInstanceOf[ZoneEntity])
-
-  def getRootZone: ZoneEntity = this.getRootVehicle.asInstanceOf[ZoneEntity]
-
-  def linkChild(childZone: ZoneEntity): Unit =
-    childZone.startRiding(this)
+  def getChildZones: Set[ZoneEntity] = this.children
 
   def getZoneType: ZoneType
 
@@ -41,23 +36,6 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     setBoundingBox(aabb)
     setPosRaw(aabb.getCenter.x, aabb.getCenter.y, aabb.getCenter.z);
   }
-
-  override def canRide(entity: Entity): Boolean = entity match {
-    case zone: ZoneEntity => zone.getZoneType.validChildren.contains(getZoneType)
-    case _                => false
-  }
-
-  override def canAddPassenger(entity: Entity): Boolean = entity match {
-    case zone: ZoneEntity => zone.getZoneType.validParents.contains(getZoneType)
-    case _                => false
-  }
-
-  /** Discard self when unmounted from parent for whatever reason */
-  override def stopRiding(): Unit =
-    if isPassenger then
-      super.stopRiding()
-      discard()
-    else super.stopRiding()
 
   override def positionRider(entity: Entity, moveFunction: Entity.MoveFunction): Unit = ()
 
@@ -68,6 +46,7 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     super.moveTo(x, y, z, 0, 0)
 
   override def readAdditionalSaveData(compoundTag: CompoundTag): Unit = {
+    super.readAdditionalSaveData(compoundTag)
     val minX = compoundTag.getDouble("minX")
     val minY = compoundTag.getDouble("minY")
     val minZ = compoundTag.getDouble("minZ")
@@ -78,6 +57,7 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
   }
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {
+    super.addAdditionalSaveData(compoundTag)
     val bb = getBoundingBox
     compoundTag.putDouble("minX", bb.minX)
     compoundTag.putDouble("minY", bb.minY)
@@ -133,7 +113,8 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
   override def recreateFromPacket(clientboundAddEntityPacket: ClientboundAddEntityPacket): Unit =
     super.recreateFromPacket(clientboundAddEntityPacket)
 
-  def saveAdditionalSpawnData(buf: FriendlyByteBuf): Unit = {
+  override def saveAdditionalSpawnData(buf: FriendlyByteBuf): Unit = {
+    super.saveAdditionalSpawnData(buf)
     buf.writeDouble(getBoundingBox.minX)
     buf.writeDouble(getBoundingBox.minY)
     buf.writeDouble(getBoundingBox.minZ)
@@ -142,7 +123,8 @@ abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     buf.writeDouble(getBoundingBox.maxZ)
   }
 
-  def loadAdditionalSpawnData(buf: FriendlyByteBuf): Unit = {
+  override def loadAdditionalSpawnData(buf: FriendlyByteBuf): Unit = {
+    super.loadAdditionalSpawnData(buf)
     val minX = buf.readDouble()
     val minY = buf.readDouble()
     val minZ = buf.readDouble()
@@ -161,11 +143,11 @@ object ZoneEntity {
     then Left("Attempted to create a zone without its parent")
     else if parentZone.isDefined && !parentZone.get.getBoundingBox.contains(zone.getBoundingBox) then
       Left("Attempted to create a child zone outside of parent zone")
-    else if ZoneManager.getConflicting(zone.level, zone.getBoundingBox, zone.getZoneType).nonEmpty then
+    else if ZoneManager.getConflicting(zone.level, zone.getBoundingBox, zone).nonEmpty then
       Left("Attempted to create a zone in a conflicting area")
     else Right(())
 
-  def makeZone(entityType: EntityType[? <: ZoneEntity], level: Level, aabb: AABB) = {
+  def makeZone(entityType: EntityType[? <: ZoneEntity], level: Level, aabb: AABB): Option[ZoneEntity] = {
     val zone = entityType.create(level)
     zone.updateBounds(aabb)
     validate(zone) match {
@@ -189,7 +171,7 @@ object ZoneEntity {
         None
       case Right(_) =>
         parent.level.addFreshEntity(zone)
-        parent.linkChild(zone)
+        parent.addChild(zone)
         Some(zone)
     }
   }

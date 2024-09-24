@@ -1,10 +1,17 @@
 package io.github.jugbot.entity
 
+import com.google.common.collect.Lists
+import dev.architectury.extensions.network.EntitySpawnExtension
+import dev.architectury.networking.NetworkManager
 import io.github.jugbot.Mod.LOGGER
 import io.github.jugbot.util.TagType
 import net.minecraft.nbt.{CompoundTag, ListTag}
+import net.minecraft.network.FriendlyByteBuf
+import net.minecraft.network.protocol.Packet
+import net.minecraft.network.protocol.game.ClientGamePacketListener
 import net.minecraft.world.entity.{Entity, EntityType}
 
+import scala.jdk.CollectionConverters.{CollectionHasAsScala, SetHasAsJava}
 import scala.jdk.OptionConverters.RichOptional
 
 /**
@@ -13,10 +20,12 @@ import scala.jdk.OptionConverters.RichOptional
  * @see PersistentEntitySectionManager.class
  */
 
-trait Owning[P <: Owning[P, C], C <: OwnedBy[P, C]](val childTag: String) extends Entity { self: P =>
-  var children: Set[C] = Set.empty
+trait WithChildren[Self <: WithChildren[Self, Child], Child <: WithParent[Child, Self]](nbtTagName: String)
+    extends Entity
+    with EntitySpawnExtension { self: Self =>
+  var children: Set[Child] = Set.empty
 
-  def addChild(child: C): Unit = {
+  def addChild(child: Child): Unit = {
     children += child
     child.parent = Some(self)
   }
@@ -32,25 +41,60 @@ trait Owning[P <: Owning[P, C], C <: OwnedBy[P, C]](val childTag: String) extend
     }
 
     if !listTag.isEmpty then {
-      compoundTag.put(childTag, listTag)
+      compoundTag.put(nbtTagName, listTag)
     }
   }
 
   override def readAdditionalSaveData(compoundTag: CompoundTag): Unit =
-    if compoundTag.contains(childTag, TagType.LIST) then {
-      val listTag = compoundTag.getList(childTag, TagType.COMPOUND)
+    if compoundTag.contains(nbtTagName, TagType.LIST) then {
+      val listTag = compoundTag.getList(nbtTagName, TagType.COMPOUND)
       for i <- 0 until listTag.size do {
         val entity = EntityType.create(listTag.getCompound(i), level).toScala
         entity match {
-          case Some(child) => addChild(child.asInstanceOf[C])
-          case _           => LOGGER.warn(s"Unable to load child entity from NBT, returned $entity")
+          case Some(child) =>
+            level.addFreshEntity(child)
+            addChild(child.asInstanceOf[Child])
+          case _ => LOGGER.warn(s"Unable to load child entity from NBT, returned $entity")
         }
       }
     }
+
+  /**
+   * Spawn data for the client
+   */
+
+  override def getAddEntityPacket: Packet[ClientGamePacketListener] = NetworkManager.createAddEntityPacket(this)
+
+  def saveAdditionalSpawnData(buf: FriendlyByteBuf): Unit =
+    buf.writeCollection[Child](children.asJava, (buf, child) => buf.writeInt(child.getId))
+
+  def loadAdditionalSpawnData(buf: FriendlyByteBuf): Unit = {
+    val mutSet = buf
+      .readCollection(
+        Lists.newArrayListWithCapacity,
+        buf => {
+          val id = buf.readInt()
+          level.getEntity(id) match {
+            case child => child.asInstanceOf[Child]
+            case null =>
+              LOGGER.error(s"Unable to load child entity with id $id")
+              null.asInstanceOf[Child]
+          }
+        }
+      )
+      .asScala
+      .filter(_ != null)
+    children = mutSet.toSet
+  }
 }
 
-trait OwnedBy[P <: Owning[P, C], C <: OwnedBy[P, C]] extends Entity { self: C =>
-  var parent: Option[P] = None
+trait WithParent[Self <: WithParent[Self, Parent], Parent <: WithChildren[Parent, Self]] extends Entity { self: Self =>
+  var parent: Option[Parent] = None
+
+  def addParent(parent: Parent): Unit = {
+    this.parent = Some(parent)
+    parent.addChild(this)
+  }
 
   override def shouldBeSaved(): Boolean =
     parent.isEmpty && super.shouldBeSaved()
