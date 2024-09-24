@@ -2,10 +2,11 @@ package io.github.jugbot.entity.zone
 
 import com.google.common.base.Suppliers
 import io.github.jugbot.blockentity.ShrineBlockEntity
-import io.github.jugbot.entity.{FaeEntity, Owning}
+import io.github.jugbot.entity.{FaeEntity, WithChildren}
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.CompoundTag
+import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.{Entity, EntityType, MobCategory, MobSpawnType}
 import net.minecraft.world.level.Level
@@ -16,12 +17,12 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: Level)
     extends ZoneEntity(entityType, world)
-    with Owning[SettlementZoneEntity, FaeEntity]("Settlers") {
+    with WithChildren[SettlementZoneEntity, FaeEntity]("Settlers") {
 
   override def getZoneType: ZoneType = ZoneType.Settlement
 
   def settlers: Set[FaeEntity] = children
-  val addSettler = addChild _
+  def addSettler(e: FaeEntity): Unit = addChild(e)
 
   def getShrineZone: Option[ShrineZoneEntity] =
     getChildZones.find(_.isInstanceOf[ShrineZoneEntity]).map(_.asInstanceOf[ShrineZoneEntity])
@@ -81,9 +82,19 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit =
     super.addAdditionalSaveData(compoundTag)
+    super[ZoneEntity].addAdditionalSaveData(compoundTag)
 
   override def readAdditionalSaveData(compoundTag: CompoundTag): Unit =
     super.readAdditionalSaveData(compoundTag)
+    super[ZoneEntity].readAdditionalSaveData(compoundTag)
+
+  override def saveAdditionalSpawnData(buf: FriendlyByteBuf): Unit =
+    super.saveAdditionalSpawnData(buf)
+    super[ZoneEntity].saveAdditionalSpawnData(buf)
+
+  override def loadAdditionalSpawnData(buf: FriendlyByteBuf): Unit =
+    super.loadAdditionalSpawnData(buf)
+    super[ZoneEntity].loadAdditionalSpawnData(buf)
 }
 
 object SettlementZoneEntity {

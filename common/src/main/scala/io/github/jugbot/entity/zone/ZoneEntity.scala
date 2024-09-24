@@ -3,7 +3,7 @@ package io.github.jugbot.entity.zone
 import dev.architectury.extensions.network.EntitySpawnExtension
 import dev.architectury.networking.NetworkManager
 import io.github.jugbot.Mod
-import io.github.jugbot.entity.{WithChildren, WithParent}
+import io.github.jugbot.entity.EntityHeirarchy
 import io.github.jugbot.extension.AABB.*
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.FriendlyByteBuf
@@ -23,12 +23,11 @@ import net.minecraft.world.{InteractionHand, InteractionResult}
 abstract class ZoneEntity(entityType: EntityType[? <: ZoneEntity], world: Level)
     extends Entity(entityType, world)
     with EntitySpawnExtension
-    with WithChildren[ZoneEntity, ZoneEntity]("SubZones")
-    with WithParent[ZoneEntity, ZoneEntity] {
+    with EntityHeirarchy[ZoneEntity]("SubZones") {
 
-  def getParentZone: Option[ZoneEntity] = this.parent
+  def getParentZone: Option[ZoneEntity] = this.getParent
 
-  def getChildZones: Set[ZoneEntity] = this.children
+  def getChildZones: Set[ZoneEntity] = this.getChildren
 
   def getZoneType: ZoneType
 

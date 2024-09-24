@@ -39,10 +39,10 @@ import scala.jdk.OptionConverters.RichOptional
 import io.github.jugbot.entity.zone.SettlementZoneEntity
 
 class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
-    extends Mob(entityType: EntityType[FaeEntity], world: Level)
+    extends Mob(entityType, world)
     with ExtraInventory
     with Hunger
-    with OwnedBy[SettlementZoneEntity, FaeEntity] {
+    with WithParent[FaeEntity, SettlementZoneEntity] {
 
   override def isPushable: Boolean = false
 
@@ -75,14 +75,14 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
 
   private def debugWrapper(name: String, args: Map[String, String]): BehaviorStatus =
     val profiler = this.level().getProfiler
-    profiler.push(name)
-    val result = performBehavior(name, args)
+    val behavior = FaeBehavior.valueOf(name, args).get
+    profiler.push(behavior.toString)
+    val result = performBehavior(behavior)
     profiler.pop()
     result
 
-  private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
-    val maybeBehavior = FaeBehavior.valueOf(name, args)
-    maybeBehavior.get match {
+  private def performBehavior(behavior: FaeBehavior): BehaviorStatus =
+    behavior match {
       case FaeBehavior.unknown() =>
         throw new Exception(
           "Encountered an unknown behavior. There is likely a problem with your config. See warnings above."
@@ -373,7 +373,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     }
   }
 
-  private val settlementZone = parent
+  private def settlementZone = parent
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {
     super.addAdditionalSaveData(compoundTag)
