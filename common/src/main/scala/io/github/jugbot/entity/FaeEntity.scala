@@ -41,6 +41,7 @@ import io.github.jugbot.entity.zone.SettlementZoneEntity
 class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     extends Mob(entityType, world)
     with ExtraInventory
+    with RandomTickingEntity
     with Hunger
     with WithParent[FaeEntity, SettlementZoneEntity] {
 
@@ -186,9 +187,12 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         this.stopSleeping()
         BehaviorSuccess
       case FaeBehavior.target_closest_block(blockQuery) =>
+        if !this.isRandomTicking then return BehaviorRunning
         val predicate = blockPredicate(blockQuery)
         val maybeClosest = this.bruteForceSearch(bp =>
           predicate(
+            // TODO: Searching for blocks is really slow for some reason, probably because we get the chunk for every block
+            // TODO: Searching for the nearest also means that we don't prioritize one chunk at a time, leading to cache misses
             BlockInWorld(this.level(), bp, false)
           )
         )
@@ -268,8 +272,10 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
       case FaeBehavior.holds_at_most(itemQuery, amount) =>
         if this.getInventory.count(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
       case FaeBehavior.target_nearest_stockpile_with(itemQuery) =>
+        if !this.isRandomTicking then return BehaviorRunning
         val predicate = itemPredicate(itemQuery)
         val maybeClosest =
+          // TODO: Entity search instead of block search
           this.bruteForceSearch { (bp: BlockPos) =>
             this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala match {
               case Some(chest: ChestBlockEntity) => chest.items.count(predicate) > 0
