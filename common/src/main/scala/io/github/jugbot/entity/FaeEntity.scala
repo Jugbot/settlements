@@ -37,6 +37,9 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.OptionConverters.RichOptional
 import io.github.jugbot.entity.zone.SettlementZoneEntity
+import io.github.jugbot.meta
+import io.github.jugbot.ai.tree.Behavior
+import io.github.jugbot.ai.tree.Blackboard
 
 class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     extends Mob(entityType, world)
@@ -61,7 +64,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     }
     behaviorLog = runModules(
       FaeBehaviorTree.map.getOrElse("root", FaeBehaviorTree.fallback),
-      this.debugWrapper,
+      this.performBehavior,
       FaeBehaviorTree.map
     )
     ()
@@ -74,276 +77,13 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
 
   private val blackboard = mutable.Map.empty[String, Any]
 
-  private def debugWrapper(name: String, args: Map[String, String]): BehaviorStatus =
+  private def performBehavior(name: String, args: Map[String, String]): BehaviorStatus =
     val profiler = this.level().getProfiler
-    val behavior = FaeBehavior.valueOf(name, args).get
+    val behavior = meta.valueOf[Behavior[FaeEntity, Blackboard]](name, args).get
     profiler.push(behavior.toString)
-    val result = performBehavior(behavior)
+    val result = behavior.execute(this, blackboard)
     profiler.pop()
     result
-
-  private def performBehavior(behavior: FaeBehavior): BehaviorStatus =
-    behavior match {
-      case FaeBehavior.unknown() =>
-        throw new Exception(
-          "Encountered an unknown behavior. There is likely a problem with your config. See warnings above."
-        )
-      case FaeBehavior.unimplemented() =>
-        BehaviorSuccess
-      case FaeBehavior.failure() =>
-        BehaviorFailure
-      case FaeBehavior.success() =>
-        BehaviorSuccess
-      case FaeBehavior.running() =>
-        BehaviorRunning
-      case FaeBehavior.is_tired() =>
-        if this.level().isNight then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.has(key) =>
-        blackboard.get(key) match {
-          case Some(_) => BehaviorSuccess
-          case _       => BehaviorFailure
-        }
-      case FaeBehavior.sleep() =>
-        blackboard.get(SPECIAL_KEYS.BED_POSITION) match {
-          case Some(bedPosition: BlockPos) =>
-            this.startSleeping(bedPosition)
-            // Return running here so that follow up tasks are not executed
-            BehaviorRunning
-          case _ => BehaviorFailure
-        }
-      case FaeBehavior.bed_is_valid() =>
-        blackboard.get(SPECIAL_KEYS.BED_POSITION) match {
-          case Some(bedPosition: BlockPos) =>
-            val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager
-            val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(bedPosition)
-            if blockState.is(BlockTags.BEDS)
-            then BehaviorSuccess
-            else BehaviorFailure
-          case _ => BehaviorFailure
-        }
-      case FaeBehavior.claim_bed() =>
-        val poiManager = this.level().asInstanceOf[ServerLevel].getPoiManager
-        // TODO: instead of finding beds within a distance we should keep record of all beds within the kingdom
-        val takenPOI = poiManager.take(
-          holder => holder.is(PoiTypes.HOME),
-          (_, bp) => {
-            val blockState: BlockState = this.level().asInstanceOf[ServerLevel].getBlockState(bp)
-            blockState.is(BlockTags.BEDS) && blockState.getValue(BedBlock.OCCUPIED) == false
-          },
-          this.blockPosition,
-          32
-        )
-        if takenPOI.isPresent then
-          blackboard.update(SPECIAL_KEYS.BED_POSITION, takenPOI.get)
-          BehaviorSuccess
-        else BehaviorFailure
-      case FaeBehavior.is_at_location(key) =>
-        blackboard.get(key) match {
-          case Some(blockPos: BlockPos)
-              if blockPos.closerToCenterThan(this.position, FaeEntity.NAVIGATION_PROXIMITY + 1) =>
-            BehaviorSuccess
-          case _ => BehaviorFailure
-        }
-      case FaeBehavior.nav_ended() =>
-        if this.getNavigation.isDone then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.reset_nav() =>
-        this.getNavigation.stop()
-        BehaviorSuccess
-      case FaeBehavior.resolve_nav() =>
-        val success = this.getNavigation.getPath.canReach
-        this.getNavigation.stop()
-        if success then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.has_nav_path_to(key) =>
-        val currentTarget = Option(this.getNavigation.getPath).map(path => path.getTarget)
-        (blackboard.get(key), currentTarget) match {
-          case (Some(posA: BlockPos), Some(posB: BlockPos))
-              if posA.distManhattan(posB) <= FaeEntity.NAVIGATION_PROXIMITY =>
-            BehaviorSuccess
-          case _ => BehaviorFailure
-        }
-      case FaeBehavior.create_nav_path_to(key) =>
-        blackboard.get(key) match {
-          case Some(blockPos: BlockPos) =>
-            this.getNavigation.stop()
-            val path = this.getNavigation.createPath(blockPos, FaeEntity.NAVIGATION_PROXIMITY)
-            if path != null && path.canReach && this.getNavigation.moveTo(path, 1)
-            then BehaviorSuccess
-            else BehaviorFailure
-          case _ => BehaviorFailure
-        }
-      case FaeBehavior.current_path_unobstructed() =>
-        if this.getNavigation.isStuck then BehaviorFailure else BehaviorSuccess
-      case FaeBehavior.move_along_current_path() =>
-        val nav = this.getNavigation
-        if nav.isInProgress then
-          nav.tick()
-          BehaviorRunning
-        else BehaviorSuccess
-      case FaeBehavior.is_sleeping() =>
-        if this.isSleeping then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.is_not_sleeping() =>
-        if !this.isSleeping then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.stop_sleeping() =>
-        this.stopSleeping()
-        BehaviorSuccess
-      case FaeBehavior.target_closest_block(blockQuery) =>
-        if !this.isRandomTicking then return BehaviorRunning
-        val predicate = blockPredicate(blockQuery)
-        val maybeClosest = this.bruteForceSearch(bp =>
-          predicate(
-            // TODO: Searching for blocks is really slow for some reason, probably because we get the chunk for every block
-            // TODO: Searching for the nearest also means that we don't prioritize one chunk at a time, leading to cache misses
-            BlockInWorld(this.level(), bp, false)
-          )
-        )
-        maybeClosest match {
-          case Some(value) =>
-            blackboard.update("target", value)
-            BehaviorSuccess
-          case None => BehaviorFailure
-        }
-      case FaeBehavior.target_is_block(blockQuery) =>
-        blackboard.get(SPECIAL_KEYS.TARGET) match {
-          case Some(blockPos: BlockPos) =>
-            val predicate = blockPredicate(blockQuery)
-            if predicate(BlockInWorld(this.level(), blockPos, false)) then BehaviorSuccess else BehaviorFailure
-          case _ => BehaviorFailure
-        }
-      case FaeBehavior.has_space_for_target_produce() =>
-        blackboard.get(SPECIAL_KEYS.TARGET) match {
-          case Some(blockPos: BlockPos) =>
-            val items = this
-              .level()
-              .getBlockState(blockPos)
-              .getDrops(
-                LootParams
-                  .Builder(this.level.asInstanceOf[ServerLevel])
-                  .withParameter(LootContextParams.ORIGIN, this.position())
-                  .withParameter(LootContextParams.TOOL, this.getItemInHand(InteractionHand.MAIN_HAND))
-                  .withParameter(LootContextParams.THIS_ENTITY, this)
-              )
-              .asScala
-            // TODO: See if you can pick up all items not just individuals
-            if items.forall(item => canTakeItem(item)) then BehaviorSuccess else BehaviorFailure
-          case _ => BehaviorFailure
-        }
-      case FaeBehavior.break_block(target) =>
-        blackboard.get(SPECIAL_KEYS.TARGET) match {
-          // TODO: Use player break animation/duration/tool
-          case Some(blockPos: BlockPos) if this.level().destroyBlock(blockPos, true, this) =>
-            BehaviorSuccess
-          case _ =>
-            BehaviorFailure
-        }
-      case FaeBehavior.place_item_at_target(itemQuery, blockPos) =>
-        // TODO: Investigate making item usage more generic and based on player behavior Block.use or Item.useOn
-        blackboard.get(blockPos) match {
-          case Some(blockPos: BlockPos) if this.equipFromInventory(itemQuery, EquipmentSlot.MAINHAND) =>
-            val itemStack = this.getItemInHand(InteractionHand.MAIN_HAND)
-            if !itemStack.isEmpty then
-              val item = itemStack.getItem
-              item match {
-                case blockItem: BlockItem =>
-                  // based on HarvestFarmland.class
-                  val blockState = blockItem.getBlock.defaultBlockState()
-                  this.level.setBlockAndUpdate(blockPos, blockState)
-                  val serverLevel = this.level.asInstanceOf[ServerLevel]
-                  serverLevel.gameEvent(GameEvent.BLOCK_PLACE, blockPos, GameEvent.Context.of(this, blockState))
-                  serverLevel.playSound(null.asInstanceOf[Player],
-                                        blockPos.getX.toDouble,
-                                        blockPos.getY.toDouble,
-                                        blockPos.getZ.toDouble,
-                                        SoundEvents.CROP_PLANTED,
-                                        SoundSource.BLOCKS,
-                                        1.0f,
-                                        1.0f
-                  )
-                  itemStack.shrink(1)
-                  if itemStack.isEmpty then this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY)
-                  BehaviorSuccess
-                case _ => BehaviorFailure
-              }
-            else BehaviorFailure
-          case _ =>
-            BehaviorFailure
-        }
-      case FaeBehavior.holds_at_least(itemQuery, amount) =>
-        if this.getInventory.count(itemQuery) >= amount.toInt then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.holds_at_most(itemQuery, amount) =>
-        if this.getInventory.count(itemQuery) <= amount.toInt then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.target_nearest_stockpile_with(itemQuery) =>
-        if !this.isRandomTicking then return BehaviorRunning
-        val predicate = itemPredicate(itemQuery)
-        val maybeClosest =
-          // TODO: Entity search instead of block search
-          this.bruteForceSearch { (bp: BlockPos) =>
-            this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala match {
-              case Some(chest: ChestBlockEntity) => chest.items.count(predicate) > 0
-              case _                             => false
-            }
-          }
-        maybeClosest match {
-          case Some(blockPos) =>
-            blackboard.update(SPECIAL_KEYS.TARGET, blockPos)
-            BehaviorSuccess
-          case None => BehaviorFailure
-        }
-      case FaeBehavior.transfer_item_from_target_until(itemQuery, amount) =>
-        blackboard.get(SPECIAL_KEYS.TARGET).flatMap { case bp: BlockPos =>
-          this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala
-        } match
-          case Some(chest: ChestBlockEntity) =>
-            val success = chest.transferItemsUntilTargetHas(this.getInventory, itemQuery, amount.toInt)
-            if success then BehaviorSuccess else BehaviorFailure
-          case None => BehaviorFailure
-      case FaeBehavior.transfer_item_to_target_until(itemQuery, amount) =>
-        blackboard.get(SPECIAL_KEYS.TARGET).flatMap { case bp: BlockPos =>
-          this.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala
-        } match
-          case Some(chest: ChestBlockEntity) =>
-            val success = this.getInventory.transferItemsUntilSelfHas(chest, itemQuery, amount.toInt)
-            if success then BehaviorSuccess else BehaviorFailure
-          case None => BehaviorFailure
-      case FaeBehavior.set(to, from) =>
-        blackboard.get(from) match {
-          case Some(value) => blackboard.update(to, value)
-          case None        => blackboard.remove(to)
-        }
-        BehaviorSuccess
-      case FaeBehavior.remove(key) =>
-        blackboard.remove(key)
-        BehaviorSuccess
-      case FaeBehavior.holds(itemQuery, min, max) =>
-        val count = this.getInventory.count(itemQuery)
-        if count >= min.toInt && count <= max.toInt then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.obtain_job() =>
-        blackboard.update("job", "farmer_wheat")
-        BehaviorSuccess
-      case FaeBehavior.equals_literal(key, value) =>
-        blackboard.get(key) match {
-          case Some(v) if v == value => BehaviorSuccess
-          case _                     => BehaviorFailure
-        }
-      case FaeBehavior.is_hungry() =>
-        if this.foodData.needsFood then BehaviorSuccess else BehaviorFailure
-      case FaeBehavior.eat_food() =>
-        this.getInventory.queryFirst("#c:foods") match {
-          case Some(ItemSlot(itemStack, slot)) =>
-            val newStack = this.foodData.eat(itemStack)
-            this.getInventory.setItem(slot, newStack)
-            BehaviorSuccess
-          case None => BehaviorFailure
-        }
-      case FaeBehavior.add(key, value) =>
-        blackboard.get(key) match {
-          case Some(acc: mutable.Set[?]) =>
-            acc.asInstanceOf[mutable.Set[String]].add(value)
-          case _ =>
-            val t = mutable.Set(value)
-            blackboard.update(key, t)
-        }
-        BehaviorSuccess
-    }
 
   override def mobInteract(player: Player, interactionHand: InteractionHand): InteractionResult = {
     if player.isCrouching && !player.isLocalPlayer then {
@@ -405,7 +145,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
    * Attempts to search for a block within a radius.
    * TODO: Instead of fixed & random, consider nonlinear random + caching
    */
-  private def bruteForceSearch(predicate: Function[BlockPos, Boolean]): Option[BlockPos] =
+  def bruteForceSearch(predicate: Function[BlockPos, Boolean]): Option[BlockPos] =
     this.blackboard.get(SPECIAL_KEYS.TARGET) match {
       // Shortcut if there is already a valid target
       case Some(bp: BlockPos) if predicate(bp) => Option(bp)
@@ -420,11 +160,11 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
 }
 
 object FaeEntity {
-  private val BED_POSITION_NBT_KEY = "bedPosition"
+  val BED_POSITION_NBT_KEY = "bedPosition"
 
-  private val NAVIGATION_PROXIMITY = 1
-  private val BRUTE_FORCE_SEARCH_RADIUS = 12
-  private val BRUTE_FORCE_SEARCH_ATTEMPTS = 20
+  val NAVIGATION_PROXIMITY = 1
+  val BRUTE_FORCE_SEARCH_RADIUS = 12
+  val BRUTE_FORCE_SEARCH_ATTEMPTS = 20
 
   final val TYPE: Supplier[EntityType[FaeEntity]] = Suppliers.memoize(() =>
     EntityType.Builder

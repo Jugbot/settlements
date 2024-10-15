@@ -29,7 +29,7 @@ trait ExtraInventory extends Mob, InventoryCarrier, MenuProvider {
    * @param slot
    * @return
    */
-  protected def equipFromInventory(itemQuery: String, slot: EquipmentSlot): Boolean = {
+  def equipFromInventory(itemQuery: String, slot: EquipmentSlot): Boolean = {
     val maybeItem = this.getInventory.query(itemQuery).headOption
     maybeItem match {
       case Some(ItemSlot(itemStack, index)) =>

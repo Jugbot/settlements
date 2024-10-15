@@ -1,15 +1,13 @@
 package io.github.jugbot
 
-import com.fasterxml.jackson.databind.JavaType
 import io.github.jugbot.ai.*
-import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.matchers.should.Matchers
-import io.github.jugbot.meta.debugAST
 import io.github.jugbot.meta.valueOf
 
 sealed trait MyEnum
 case class One() extends MyEnum
-case class Two(value: String) extends MyEnum
+
+sealed trait MyEnumTwo extends MyEnum
+case class Two(value: String) extends MyEnumTwo
 
 class EnumUtilsTest extends UnitSuite {
   private def wrapper(arg: String, m: Map[String, String] = Map.empty) = valueOf[MyEnum](arg, m)
