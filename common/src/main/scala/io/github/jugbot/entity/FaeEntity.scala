@@ -2,44 +2,27 @@ package io.github.jugbot.entity
 
 import com.google.common.base.Suppliers
 import io.github.jugbot.ai.*
-import io.github.jugbot.ai.tree.{FaeBehavior, FaeBehaviorTree}
+import io.github.jugbot.ai.tree.{Behavior, Blackboard, FaeBehaviorTree}
+import io.github.jugbot.entity.zone.SettlementZoneEntity
 import io.github.jugbot.extension.AABB.*
 import io.github.jugbot.extension.BoundingBox.*
-import io.github.jugbot.extension.Container.*
-import io.github.jugbot.extension.Container.Query.*
-import io.github.jugbot.util.{blockPredicate, itemPredicate}
+import io.github.jugbot.meta
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.{CompoundTag, NbtUtils}
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.DebugPackets
 import net.minecraft.server.level.ServerLevel
-import net.minecraft.sounds.{SoundEvents, SoundSource}
-import net.minecraft.tags.BlockTags
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.*
 import net.minecraft.world.entity.ai.attributes.{AttributeSupplier, Attributes}
-import net.minecraft.world.entity.ai.village.poi.{PoiManager, PoiTypes}
+import net.minecraft.world.entity.ai.village.poi.PoiManager
 import net.minecraft.world.entity.player.Player
-import net.minecraft.world.item.{BlockItem, ItemStack}
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.block.BedBlock
-import net.minecraft.world.level.block.entity.{BlockEntityType, ChestBlockEntity}
-import net.minecraft.world.level.block.state.BlockState
-import net.minecraft.world.level.block.state.pattern.BlockInWorld
-import net.minecraft.world.level.gameevent.GameEvent
-import net.minecraft.world.level.storage.loot.LootParams
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams
 import net.minecraft.world.{InteractionHand, InteractionResult}
 
 import java.util.function.Supplier
 import scala.collection.mutable
-import scala.jdk.CollectionConverters.CollectionHasAsScala
-import scala.jdk.OptionConverters.RichOptional
-import io.github.jugbot.entity.zone.SettlementZoneEntity
-import io.github.jugbot.meta
-import io.github.jugbot.ai.tree.Behavior
-import io.github.jugbot.ai.tree.Blackboard
 
 class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     extends Mob(entityType, world)
@@ -154,7 +137,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         // Check adjacent blocks first, then do a limited random search in a large area
         // The adjacent search should not go beyond the navigation termination distance otherwise the pathfinding could get stuck on a bad target
         settlementZone.flatMap(
-          _.getBoundingBox.toBoundingBox.closestCoordinatesInside(this.blockPosition).map(BlockPos(_)).find(predicate)
+          _.getBoundingBox.toBoundingBox.closestCoordinatesInside(this.blockPosition, 8).map(BlockPos(_)).find(predicate)
         )
     }
 }
