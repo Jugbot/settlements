@@ -109,9 +109,10 @@ object NavigationBehavior:
 
 sealed trait ThrottledBehavior extends Behavior[RandomTickingEntity, Blackboard]
 
-case class is_not_throttled() extends ThrottledBehavior:
-  override def execute(actor: RandomTickingEntity, state: Blackboard): BehaviorStatus =
-    if actor.isRandomTicking then BehaviorSuccess else BehaviorFailure
+object ThrottledBehavior:
+  case class is_not_throttled() extends ThrottledBehavior:
+    override def execute(actor: RandomTickingEntity, state: Blackboard): BehaviorStatus =
+      if actor.isRandomTicking then BehaviorSuccess else BehaviorFailure
 
 sealed trait FaeBehavior extends Behavior[FaeEntity, Blackboard]
 
