@@ -18,7 +18,10 @@ inline def valueOf[T](arg: String, map: Map[String, Any]): Option[T] =
 def valueOfImpl[T: Type](arg: Expr[String], m: Expr[Map[String, Any]])(using Quotes): Expr[Option[T]] = {
   import quotes.reflect.*
   val tpe = TypeRepr.of[T]
-  val cases = tpe.typeSymbol.children
+  def getCaseClassesRecursive(sym: Symbol): List[Symbol] =
+    if sym.isClassDef && sym.flags.is(Flags.Case) then List(sym)
+    else sym.children.flatMap(getCaseClassesRecursive)
+  val cases = getCaseClassesRecursive(tpe.typeSymbol)
   def strExpr(f: String) = Literal(StringConstant(f)).asExprOf[String]
 
   def symbolInitExpr(sym: Symbol) = {

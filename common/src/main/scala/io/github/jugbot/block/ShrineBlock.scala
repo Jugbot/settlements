@@ -60,10 +60,7 @@ class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
                                            blockState: BlockState,
                                            blockEntityType: BlockEntityType[T]
   ): BlockEntityTicker[T] =
-    createTickerHelper(blockEntityType,
-                       ShrineBlockEntity.TYPE.get(),
-                       (world1, pos, state1, be) => ShrineBlockEntity.tick(world1, pos, state1, be)
-    )
+    createTickerHelper(blockEntityType, ShrineBlockEntity.TYPE.get(), ShrineBlockEntity.tick)
 
   override def setPlacedBy(level: Level,
                            blockPos: BlockPos,
@@ -75,6 +72,7 @@ class ShrineBlock(properties: Properties) extends BaseEntityBlock(properties) {
     (blockEntity, livingEntity) match {
       case (shrineBlockEntity: ShrineBlockEntity, player: Player) =>
         shrineBlockEntity.owners += player.getUUID
+      case _ => ()
     }
   }
 }

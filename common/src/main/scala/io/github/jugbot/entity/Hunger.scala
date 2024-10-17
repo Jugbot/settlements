@@ -104,7 +104,7 @@ class FoodData {
 }
 
 trait Hunger extends Mob {
-  protected val foodData = new FoodData
+  val foodData = new FoodData
 
   def isHurt: Boolean = this.getHealth > 0.0f && this.getHealth < this.getMaxHealth
 

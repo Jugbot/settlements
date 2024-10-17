@@ -2,7 +2,19 @@ package io.github.jugbot.ai.tree
 
 import com.fasterxml.jackson.databind.JavaType
 import io.github.jugbot.Mod.LOGGER
-import io.github.jugbot.ai.{ActionNode, BTMapper, Node}
+import io.github.jugbot.ai.{
+  isValidTree,
+  ActionNode,
+  BTMapper,
+  BehaviorFailure,
+  BehaviorRunning,
+  BehaviorStatus,
+  BehaviorSuccess,
+  Node,
+  ParameterizedNode,
+  SelectorNode,
+  SequenceNode
+}
 import net.minecraft.server.packs.resources.{ResourceManager, SimplePreparableReloadListener}
 import net.minecraft.util.profiling.ProfilerFiller
 
@@ -10,74 +22,13 @@ import java.io.Reader
 import java.nio.file.Path
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
-import io.github.jugbot.ai.ParameterizedNode
-import io.github.jugbot.ai.SelectorNode
-import io.github.jugbot.ai.SequenceNode
 import scala.collection.mutable.Set as MutableSet
 import scala.collection.mutable.Seq as MutableSeq
-import io.github.jugbot.ai.isValidTree
+import io.github.jugbot.entity.FaeEntity
 import net.minecraft.server.packs.resources.Resource
 import net.minecraft.resources.ResourceLocation
-
-object BlackboardKey {
-  val bed_position = "bed_position"
-}
-
-sealed trait FaeBehavior
-
-object FaeBehavior {
-
-  /// A default value for when a FaeBehavior cannot be properly resolved
-  case class unknown() extends FaeBehavior
-
-  /// A placeholder behavior that always is successful
-  case class unimplemented() extends FaeBehavior
-
-  /// Hardcoded statuses
-  case class failure() extends FaeBehavior
-  case class success() extends FaeBehavior
-  case class running() extends FaeBehavior
-
-  /// Blackboard functions
-  case class set(key: String, value: String) extends FaeBehavior
-  case class has(value: String) extends FaeBehavior
-  case class remove(key: String) extends FaeBehavior
-  case class add(key: String, value: String) extends FaeBehavior
-
-  case class sleep() extends FaeBehavior
-  case class is_tired() extends FaeBehavior
-  case class claim_bed() extends FaeBehavior
-  case class bed_is_valid() extends FaeBehavior
-  case class is_at_location(target: String) extends FaeBehavior
-  case class has_nav_path_to(target: String) extends FaeBehavior
-  case class create_nav_path_to(target: String) extends FaeBehavior
-  case class current_path_unobstructed() extends FaeBehavior
-  case class move_along_current_path() extends FaeBehavior
-  case class is_sleeping() extends FaeBehavior
-  case class is_not_sleeping() extends FaeBehavior
-  case class stop_sleeping() extends FaeBehavior
-  case class target_closest_block(block: String) extends FaeBehavior
-  case class target_is_block(block: String) extends FaeBehavior
-  case class has_space_for_target_produce() extends FaeBehavior
-  case class break_block(blockPos: String) extends FaeBehavior
-  case class place_item_at_target(item: String, blockPos: String) extends FaeBehavior
-  case class holds_at_least(item: String, amount: String) extends FaeBehavior
-  case class holds_at_most(item: String, amount: String) extends FaeBehavior
-  case class target_nearest_stockpile_with(item: String) extends FaeBehavior
-  case class transfer_item_from_target_until(item: String, amount: String) extends FaeBehavior
-  case class transfer_item_to_target_until(item: String, amount: String) extends FaeBehavior
-  case class holds(item: String, min: String, max: String) extends FaeBehavior
-  case class obtain_job() extends FaeBehavior
-  case class equals_literal(key: String, value: String) extends FaeBehavior
-  case class nav_ended() extends FaeBehavior
-  case class reset_nav() extends FaeBehavior
-  case class resolve_nav() extends FaeBehavior
-  case class is_hungry() extends FaeBehavior
-  case class eat_food() extends FaeBehavior
-
-  def valueOf(name: String, args: Map[String, String]): Option[FaeBehavior] =
-    io.github.jugbot.meta.valueOf[FaeBehavior](name, args)
-}
+import net.minecraft.world.entity.Entity
+import io.github.jugbot.meta
 
 object FaeBehaviorTree {
   private var behaviorTreeMap: Map[String, ParameterizedNode] = Map()
@@ -115,7 +66,7 @@ object FaeBehaviorTree {
                        resourceManager: ResourceManager,
                        profilerFiller: ProfilerFiller
     ): Unit =
-      assert(isValidTree(map, FaeBehavior.valueOf), "Could not validate behavior configs!")
+      assert(isValidTree(map, meta.valueOf[Behavior[FaeEntity, Blackboard]]), "Could not validate behavior configs!")
       FaeBehaviorTree.behaviorTreeMap = map
   }
 }

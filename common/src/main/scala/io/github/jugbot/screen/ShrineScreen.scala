@@ -2,6 +2,7 @@ package io.github.jugbot.screen
 
 import io.github.jugbot.Mod
 import io.github.jugbot.blockentity.ShrineBlockEntity
+import io.github.jugbot.entity.zone.ShrineZoneEntity
 import net.minecraft.client.GameNarrator
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.MultiLineTextWidget
@@ -17,7 +18,7 @@ class ShrineScreen(blockEntity: ShrineBlockEntity) extends Screen(GameNarrator.N
 
   private def shrineInfo =
     s"""Level: ${blockEntity.tier}
-       |Blocks required within ${ShrineBlockEntity.blockRadius} meters:
+       |Blocks required within ${ShrineZoneEntity.DEFAULT_RADIUS} meters:
        |${blockEntity.nextTierRequirements.map(req => s"- ${req.toRenderableString}").mkString("\n")}
        |""".stripMargin.replaceAll("\r", "")
 

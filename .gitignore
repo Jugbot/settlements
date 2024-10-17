@@ -48,3 +48,4 @@ replay_*.log
 # architectury
 
 .architectury-transformer/
+*.log
