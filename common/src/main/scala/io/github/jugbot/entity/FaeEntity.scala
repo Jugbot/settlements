@@ -137,7 +137,10 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
         // Check adjacent blocks first, then do a limited random search in a large area
         // The adjacent search should not go beyond the navigation termination distance otherwise the pathfinding could get stuck on a bad target
         settlementZone.flatMap(
-          _.getBoundingBox.toBoundingBox.closestCoordinatesInside(this.blockPosition, 8).map(BlockPos(_)).find(predicate)
+          _.getBoundingBox.toBoundingBox
+            .closestCoordinatesInside(this.blockPosition, 8)
+            .map(BlockPos(_))
+            .find(predicate)
         )
     }
 }

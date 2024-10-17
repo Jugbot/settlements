@@ -12,7 +12,7 @@ class BoundingBoxTest extends UnitSuite {
     val blockPos = new Vec3i(1, 1, 1)
     val result = zone.closestCoordinatesInside(blockPos).toList
 
-    result.length shouldEqual 4 * 4 * 4 - 1
+    result.length shouldEqual 4 * 4 * 4
   }
 
   test("closestBlocksInside should return blocks inside the zone within some distance") {
@@ -20,22 +20,22 @@ class BoundingBoxTest extends UnitSuite {
     val blockPos = new Vec3i(1, 1, 1)
     val result = zone.closestCoordinatesInside(blockPos, 1).toList
 
-    result.length shouldEqual 6
+    result.length shouldEqual 7
   }
 
-  test("closestBlocksInside should return no blocks within zero distance") {
+  test("closestBlocksInside should only return blockPos with max distance set to zero") {
     val zone = new BoundingBox(0, 0, 0, 3, 3, 3)
     val blockPos = new Vec3i(1, 1, 1)
     val result = zone.closestCoordinatesInside(blockPos, 0).toList
 
-    result.length shouldEqual 0
+    result.length shouldEqual 1
   }
 
   test("closestBlocksInside should return blocks ordered by increasing distance from blockPos") {
     val zone = new BoundingBox(0, 0, 0, 3, 3, 3)
     val blockPos = new Vec3i(2, 2, 2)
     val result = zone.closestCoordinatesInside(blockPos)
-    var distance = 1
+    var distance = 0
     for {
       i <- result.indices
     } {
@@ -65,12 +65,12 @@ class BoundingBoxTest extends UnitSuite {
     result.head shouldEqual Vec3i(5, 5, 5)
   }
 
-  test("closestBlocksInside should handle edge case where zone is a single block") {
+  test("closestBlocksInside should handle edge case where zone is a single block and blockPos is inside") {
     val zone = new BoundingBox(2, 2, 2, 2, 2, 2)
     val blockPos = new Vec3i(2, 2, 2)
     val result = zone.closestCoordinatesInside(blockPos).toList
 
-    result shouldEqual Nil
+    result shouldEqual Seq(Vec3i(2, 2, 2))
   }
 
   test("closestBlocksInside should handle edge case where zone is a single block and blockPos is outside") {

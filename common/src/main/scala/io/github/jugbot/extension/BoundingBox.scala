@@ -13,6 +13,7 @@ object BoundingBox {
 
     /**
      * Iterates through all coordinates in the zone, ordered by increasing distance from blockPos
+     * If blockPos is inside the zone, it will be the first element
      *
      * @param blockPos    The center of the search (which will be excluded from the result)
      * @param maxDistance Distance from blockPos to the furthest coordinate to include
@@ -34,7 +35,6 @@ object BoundingBox {
         if xSign != x + 1 && ySign != y + 1 && zSign != z + 1
         result = startingBlock.offset(x * xSign, y * ySign, z * zSign)
         if bb.isInside(result)
-        if result != blockPos
       } yield result
     }
 
