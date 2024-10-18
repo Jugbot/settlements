@@ -2,10 +2,12 @@ package io.github.jugbot.ai.tree
 
 import io.github.jugbot.ai.{BehaviorFailure, BehaviorRunning, BehaviorStatus, BehaviorSuccess}
 import io.github.jugbot.entity.{FaeEntity, RandomTickingEntity}
+import io.github.jugbot.extension.AABB.*
+import io.github.jugbot.extension.BoundingBox.*
 import io.github.jugbot.extension.Container.*
 import io.github.jugbot.extension.Container.Query.*
 import io.github.jugbot.util.{blockPredicate, itemPredicate}
-import net.minecraft.core.BlockPos
+import net.minecraft.core.{BlockPos, Vec3i}
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.{SoundEvents, SoundSource}
 import net.minecraft.tags.BlockTags
@@ -14,7 +16,7 @@ import net.minecraft.world.entity.ai.village.poi.PoiTypes
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.{EquipmentSlot, Mob}
 import net.minecraft.world.item.{BlockItem, ItemStack}
-import net.minecraft.world.level.block.BedBlock
+import net.minecraft.world.level.block.{BedBlock, ChestBlock}
 import net.minecraft.world.level.block.entity.{BlockEntityType, ChestBlockEntity}
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.pattern.BlockInWorld
@@ -29,6 +31,7 @@ import scala.jdk.OptionConverters.RichOptional
 private object SPECIAL_KEYS {
   val TARGET = "target"
   val BED_POSITION = "bed_position"
+  val SEARCH_PROGRESS = "search_progress"
 }
 
 type Blackboard = mutable.Map[String, Any]
@@ -41,7 +44,7 @@ sealed trait ConstantBehavior extends Behavior[Any, Any]:
   override def execute(actor: Any, state: Any): BehaviorStatus = execute()
   def execute(): BehaviorStatus
 
-object ConstantBehavior:
+object ConstantBehavior {
   case class failure() extends ConstantBehavior:
     override def execute(): BehaviorStatus = BehaviorFailure
 
@@ -50,10 +53,85 @@ object ConstantBehavior:
 
   case class running() extends ConstantBehavior:
     override def execute(): BehaviorStatus = BehaviorRunning
+}
+
+sealed trait TargetingBehavior extends Behavior[FaeEntity, Blackboard]
+
+object TargetingBehavior {
+
+  // Arbitrary limit to the # of blocks searched per tick
+  private val MAX_SEARCH_PER_TICK = 1024
+
+  /**
+   * Attempts to search for a block within a radius.
+   * TODO: Instead of fixed & random, consider nonlinear random + caching
+   */
+  def targetHelper(actor: FaeEntity, blackboard: Blackboard, predicate: Function[BlockPos, Boolean]): BehaviorStatus =
+    blackboard.remove(SPECIAL_KEYS.SEARCH_PROGRESS) match {
+      case Some(progress) =>
+        actor.level.getProfiler.push("split lazy list")
+        val (batch, remaining) = progress.asInstanceOf[LazyList[Vec3i]].splitAt(MAX_SEARCH_PER_TICK)
+        actor.level.getProfiler.pop()
+        actor.level.getProfiler.push("search")
+        val maybeBlockPos = batch
+          .map(BlockPos(_))
+          .find(predicate)
+        actor.level.getProfiler.pop()
+        actor.level.getProfiler.push("match case")
+        val result = maybeBlockPos match {
+          case Some(blockPos) =>
+            blackboard.update(SPECIAL_KEYS.TARGET, blockPos)
+            BehaviorSuccess
+          case None if remaining.isEmpty =>
+            // Search exhausted
+            BehaviorFailure
+          case None =>
+            blackboard.update(SPECIAL_KEYS.SEARCH_PROGRESS, remaining)
+            BehaviorRunning
+        }
+        actor.level.getProfiler.pop()
+        result
+      case None =>
+        actor.level.getProfiler.push("create lazy list")
+        blackboard.update(SPECIAL_KEYS.SEARCH_PROGRESS,
+                          actor.settlementZone.get.getBoundingBox.toBoundingBox
+                            .closestCoordinatesInside(actor.blockPosition)
+        )
+        actor.level.getProfiler.pop()
+        BehaviorRunning
+    }
+
+  case class target_closest_block(block: String) extends TargetingBehavior:
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
+      val predicate = blockPredicate(block)
+      targetHelper(
+        actor,
+        state,
+        bp =>
+          predicate(
+            // TODO: Searching for blocks is really slow for some reason, probably because we get the chunk for every block
+            // TODO: Searching for the nearest also means that we don't prioritize one chunk at a time, leading to cache misses
+            BlockInWorld(actor.level(), bp, false)
+          )
+      )
+  case class target_nearest_stockpile_with(item: String) extends TargetingBehavior:
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
+      val predicate = itemPredicate(item)
+      targetHelper(
+        actor,
+        state,
+        (bp: BlockPos) =>
+          actor.level.getBlockState(bp).getBlock.isInstanceOf[ChestBlock] &&
+            (actor.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala match {
+              case Some(chest: ChestBlockEntity) => chest.items.count(predicate) > 0
+              case _                             => false
+            })
+      )
+}
 
 sealed trait NavigationBehavior extends Behavior[Mob, Blackboard]
 
-object NavigationBehavior:
+object NavigationBehavior {
   case class is_at_location(target: String) extends NavigationBehavior:
     override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
       state.get(target) match {
@@ -106,17 +184,19 @@ object NavigationBehavior:
         nav.tick()
         BehaviorRunning
       else BehaviorSuccess
+}
 
 sealed trait ThrottledBehavior extends Behavior[RandomTickingEntity, Blackboard]
 
-object ThrottledBehavior:
+object ThrottledBehavior {
   case class is_not_throttled() extends ThrottledBehavior:
     override def execute(actor: RandomTickingEntity, state: Blackboard): BehaviorStatus =
       if actor.isRandomTicking then BehaviorSuccess else BehaviorFailure
+}
 
 sealed trait FaeBehavior extends Behavior[FaeEntity, Blackboard]
 
-object FaeBehavior:
+object FaeBehavior {
   case class sleep() extends FaeBehavior:
     override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       state.get(SPECIAL_KEYS.BED_POSITION) match {
@@ -171,30 +251,6 @@ object FaeBehavior:
     override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       actor.stopSleeping()
       BehaviorSuccess
-  case class target_closest_block(block: String) extends FaeBehavior:
-    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
-      val predicate = blockPredicate(block)
-      val maybeClosest = actor.bruteForceSearch(bp =>
-        predicate(
-          // TODO: Searching for blocks is really slow for some reason, probably because we get the chunk for every block
-          // TODO: Searching for the nearest also means that we don't prioritize one chunk at a time, leading to cache misses
-          BlockInWorld(actor.level(), bp, false)
-        )
-      )
-      maybeClosest match {
-        case Some(value) =>
-          state.update("target", value)
-          BehaviorSuccess
-        case None => BehaviorFailure
-      }
-  case class target_is_block(block: String) extends FaeBehavior:
-    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
-      state.get(SPECIAL_KEYS.TARGET) match {
-        case Some(blockPos: BlockPos) =>
-          val predicate = blockPredicate(block)
-          if predicate(BlockInWorld(actor.level(), blockPos, false)) then BehaviorSuccess else BehaviorFailure
-        case _ => BehaviorFailure
-      }
   case class has_space_for_target_produce() extends FaeBehavior:
     override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       state.get(SPECIAL_KEYS.TARGET) match {
@@ -222,6 +278,14 @@ object FaeBehavior:
           BehaviorSuccess
         case _ =>
           BehaviorFailure
+      }
+  case class target_is_block(block: String) extends FaeBehavior:
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
+      state.get(SPECIAL_KEYS.TARGET) match {
+        case Some(blockPos: BlockPos) =>
+          val predicate = blockPredicate(block)
+          if predicate(BlockInWorld(actor.level(), blockPos, false)) then BehaviorSuccess else BehaviorFailure
+        case _ => BehaviorFailure
       }
   case class place_item_at_target(item: String, blockPos: String) extends FaeBehavior:
     override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
@@ -262,23 +326,6 @@ object FaeBehavior:
   case class holds_at_most(item: String, amount: String) extends FaeBehavior:
     override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       if actor.getInventory.count(item) <= amount.toInt then BehaviorSuccess else BehaviorFailure
-  case class target_nearest_stockpile_with(item: String) extends FaeBehavior:
-    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
-      val predicate = itemPredicate(item)
-      val maybeClosest =
-        // TODO: Entity search instead of block search
-        actor.bruteForceSearch { (bp: BlockPos) =>
-          actor.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala match {
-            case Some(chest: ChestBlockEntity) => chest.items.count(predicate) > 0
-            case _                             => false
-          }
-        }
-      maybeClosest match {
-        case Some(blockPos) =>
-          state.update(SPECIAL_KEYS.TARGET, blockPos)
-          BehaviorSuccess
-        case None => BehaviorFailure
-      }
   case class transfer_item_from_target_until(item: String, amount: String) extends FaeBehavior:
     override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       state.get(SPECIAL_KEYS.TARGET).flatMap { case bp: BlockPos =>
@@ -317,12 +364,12 @@ object FaeBehavior:
           BehaviorSuccess
         case None => BehaviorFailure
       }
-
+}
 sealed trait BlackboardBehavior extends Behavior[Any, Blackboard]:
   override def execute(actor: Any, state: Blackboard): BehaviorStatus = execute(state)
   def execute(state: Blackboard): BehaviorStatus
 
-object BlackboardBehavior:
+object BlackboardBehavior {
   case class set(key: String, value: String) extends BlackboardBehavior:
     override def execute(state: Blackboard): BehaviorStatus =
       state.get(value) match {
@@ -360,3 +407,4 @@ object BlackboardBehavior:
         case Some(v) if v == value => BehaviorSuccess
         case _                     => BehaviorFailure
       }
+}

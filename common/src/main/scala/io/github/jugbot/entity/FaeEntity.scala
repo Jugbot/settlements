@@ -68,7 +68,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     profiler.pop()
     result
 
-  override def mobInteract(player: Player, interactionHand: InteractionHand): InteractionResult = {
+  override def mobInteract(player: Player, interactionHand: InteractionHand): InteractionResult =
     if player.isCrouching && !player.isLocalPlayer then {
       player.sendSystemMessage(Component.literal("Behavior Log:").withStyle(ChatFormatting.BOLD))
       behaviorLog.foreach { log =>
@@ -78,9 +78,10 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
           else basicMessage.withStyle(ChatFormatting.BLUE)
         player.sendSystemMessage(styledMessage)
       }
+      InteractionResult.PASS
+    } else {
+      super.mobInteract(player, interactionHand)
     }
-    super.mobInteract(player, interactionHand)
-  }
 
   override def die(damageSource: DamageSource): Unit = {
     super.die(damageSource)
@@ -102,7 +103,7 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     }
   }
 
-  private def settlementZone = parent
+  def settlementZone = parent
 
   override def addAdditionalSaveData(compoundTag: CompoundTag): Unit = {
     super.addAdditionalSaveData(compoundTag)
@@ -124,31 +125,13 @@ class FaeEntity(entityType: EntityType[FaeEntity], world: Level)
     }
   }
 
-  /**
-   * Attempts to search for a block within a radius.
-   * TODO: Instead of fixed & random, consider nonlinear random + caching
-   */
-  def bruteForceSearch(predicate: Function[BlockPos, Boolean]): Option[BlockPos] =
-    this.blackboard.get(SPECIAL_KEYS.TARGET) match {
-      // Shortcut if there is already a valid target
-      case Some(bp: BlockPos) if predicate(bp) => Option(bp)
-      // Else perform expensive search
-      case _ =>
-        // Check adjacent blocks first, then do a limited random search in a large area
-        // The adjacent search should not go beyond the navigation termination distance otherwise the pathfinding could get stuck on a bad target
-        settlementZone.flatMap(
-          _.getBoundingBox.toBoundingBox
-            .closestCoordinatesInside(this.blockPosition, 8)
-            .map(BlockPos(_))
-            .find(predicate)
-        )
-    }
 }
 
 object FaeEntity {
   val BED_POSITION_NBT_KEY = "bedPosition"
 
   val NAVIGATION_PROXIMITY = 1
+  val TEMP_SEARCH_RADIUS = 64
   val BRUTE_FORCE_SEARCH_RADIUS = 12
   val BRUTE_FORCE_SEARCH_ATTEMPTS = 20
 
