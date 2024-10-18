@@ -16,7 +16,7 @@ import net.minecraft.world.entity.ai.village.poi.PoiTypes
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.{EquipmentSlot, Mob}
 import net.minecraft.world.item.{BlockItem, ItemStack}
-import net.minecraft.world.level.block.{BedBlock, ChestBlock}
+import net.minecraft.world.level.block.BedBlock
 import net.minecraft.world.level.block.entity.{BlockEntityType, ChestBlockEntity}
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.pattern.BlockInWorld
@@ -66,19 +66,27 @@ object TargetingBehavior {
    * Attempts to search for a block within a radius.
    * TODO: Instead of fixed & random, consider nonlinear random + caching
    */
-  def targetHelper(actor: FaeEntity, blackboard: Blackboard, predicate: Function[BlockPos, Boolean]): BehaviorStatus =
-    blackboard.remove(SPECIAL_KEYS.SEARCH_PROGRESS) match {
+  def targetHelper(key: String,
+                   actor: FaeEntity,
+                   blackboard: Blackboard,
+                   predicate: Function[BlockPos, Boolean]
+  ): BehaviorStatus =
+    if blackboard.get(SPECIAL_KEYS.TARGET).exists {
+        case bp: BlockPos if predicate(bp) => true
+        case _                             => false
+      }
+    then
+      // Shortcut if target is already valid
+      blackboard.remove(key)
+      return BehaviorSuccess
+    blackboard.remove(key) match {
       case Some(progress) =>
-        actor.level.getProfiler.push("split lazy list")
-        val (batch, remaining) = progress.asInstanceOf[LazyList[Vec3i]].splitAt(MAX_SEARCH_PER_TICK)
-        actor.level.getProfiler.pop()
-        actor.level.getProfiler.push("search")
+        val remaining = progress.asInstanceOf[Iterator[Option[Vec3i]]]
+        val batch = remaining.take(MAX_SEARCH_PER_TICK).flatten.toList
         val maybeBlockPos = batch
           .map(BlockPos(_))
           .find(predicate)
-        actor.level.getProfiler.pop()
-        actor.level.getProfiler.push("match case")
-        val result = maybeBlockPos match {
+        maybeBlockPos match {
           case Some(blockPos) =>
             blackboard.update(SPECIAL_KEYS.TARGET, blockPos)
             BehaviorSuccess
@@ -86,46 +94,45 @@ object TargetingBehavior {
             // Search exhausted
             BehaviorFailure
           case None =>
-            blackboard.update(SPECIAL_KEYS.SEARCH_PROGRESS, remaining)
+            blackboard.update(key, remaining)
             BehaviorRunning
         }
-        actor.level.getProfiler.pop()
-        result
       case None =>
-        actor.level.getProfiler.push("create lazy list")
-        blackboard.update(SPECIAL_KEYS.SEARCH_PROGRESS,
+        blackboard.update(key,
                           actor.settlementZone.get.getBoundingBox.toBoundingBox
                             .closestCoordinatesInside(actor.blockPosition)
         )
-        actor.level.getProfiler.pop()
         BehaviorRunning
     }
 
   case class target_closest_block(block: String) extends TargetingBehavior:
+    private val predicate = blockPredicate(block)
     override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
-      val predicate = blockPredicate(block)
       targetHelper(
+        "target_closest_block",
         actor,
         state,
         bp =>
           predicate(
-            // TODO: Searching for blocks is really slow for some reason, probably because we get the chunk for every block
-            // TODO: Searching for the nearest also means that we don't prioritize one chunk at a time, leading to cache misses
             BlockInWorld(actor.level(), bp, false)
           )
       )
   case class target_nearest_stockpile_with(item: String) extends TargetingBehavior:
+    private val predicate = itemPredicate(item)
     override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
-      val predicate = itemPredicate(item)
       targetHelper(
+        "target_nearest_stockpile_with",
         actor,
         state,
-        (bp: BlockPos) =>
-          actor.level.getBlockState(bp).getBlock.isInstanceOf[ChestBlock] &&
-            (actor.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala match {
-              case Some(chest: ChestBlockEntity) => chest.items.count(predicate) > 0
-              case _                             => false
-            })
+        (bp: BlockPos) => {
+          actor.level.getProfiler.push("get block entity")
+          val result = actor.level.getBlockEntity(bp, BlockEntityType.CHEST).toScala match {
+            case Some(chest: ChestBlockEntity) => chest.items.count(predicate) > 0
+            case _                             => false
+          }
+          actor.level.getProfiler.pop()
+          result
+        }
       )
 }
 
