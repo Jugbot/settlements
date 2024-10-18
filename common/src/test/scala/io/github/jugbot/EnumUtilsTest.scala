@@ -9,7 +9,6 @@ case object Three extends MyEnum
 sealed trait MyEnumTwo extends MyEnum
 case class Two(value: String) extends MyEnumTwo
 
-
 class EnumUtilsTest extends UnitSuite {
   private def wrapper(arg: String, m: Map[String, String] = Map.empty) = meta.valueOf[MyEnum](arg, m)
   test("valueOf with correct name returns some") {

@@ -20,21 +20,19 @@ def valueOfImpl[T: Type](arg: Expr[String], m: Expr[Map[String, Any]])(using Quo
   val tpe = TypeRepr.of[T]
   def getCaseClassesRecursive(sym: Symbol): List[Symbol] =
     // case classes and objects
-    if sym.isClassDef && sym.flags.is(Flags.Case) || sym.flags.is(Flags.Module) then List(sym)
+    if sym.flags.is(Flags.Case) && (sym.isClassDef || sym.flags.is(Flags.Module)) then List(sym)
     else sym.children.flatMap(getCaseClassesRecursive)
   val cases = getCaseClassesRecursive(tpe.typeSymbol)
   def strExpr(f: String) = Literal(StringConstant(f)).asExprOf[String]
 
-  def symbolInitExpr(sym: Symbol) = {
-    if sym.flags.is(Flags.Module) then
-      Ident(sym.termRef).asExprOf[T]
+  def symbolInitExpr(sym: Symbol) =
+    if sym.flags.is(Flags.Module) then Ident(sym.termRef).asExprOf[T]
     else
       val tpeExpr = TypeIdent(sym)
       val ctorSym = sym.primaryConstructor
       val initFields = sym.caseFields.map(f => '{ $m(${ strExpr(f.name) }) }.asTerm)
       val newExpr = Apply(Select(New(tpeExpr), ctorSym), initFields)
       newExpr.asExprOf[T]
-  }
 
   def matchCaseReducer(acc: Expr[Option[T]], child: Symbol): Expr[Option[T]] = {
     val childExpr = symbolInitExpr(child)
