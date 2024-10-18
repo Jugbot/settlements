@@ -1,16 +1,17 @@
 package io.github.jugbot
 
 import io.github.jugbot.ai.*
-import io.github.jugbot.meta.valueOf
 
 sealed trait MyEnum
 case class One() extends MyEnum
+case object Three extends MyEnum
 
 sealed trait MyEnumTwo extends MyEnum
 case class Two(value: String) extends MyEnumTwo
 
+
 class EnumUtilsTest extends UnitSuite {
-  private def wrapper(arg: String, m: Map[String, String] = Map.empty) = valueOf[MyEnum](arg, m)
+  private def wrapper(arg: String, m: Map[String, String] = Map.empty) = meta.valueOf[MyEnum](arg, m)
   test("valueOf with correct name returns some") {
     val myEnum = wrapper("One")
     myEnum shouldEqual Some(One())
@@ -26,5 +27,9 @@ class EnumUtilsTest extends UnitSuite {
   test("valueOf without correct name and args returns some") {
     val myEnum = wrapper("Two", Map.empty)
     myEnum shouldEqual None
+  }
+  test("valueOf with correct name of object returns some") {
+    val myEnum = wrapper("Three")
+    myEnum shouldEqual Some(Three)
   }
 }

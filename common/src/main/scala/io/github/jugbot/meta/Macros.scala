@@ -8,7 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
   * Maps string names and a mao of parameters to their corresponding case class
-  * @param arg Name of the case object e.g. case class Thing() means you need "Thing"
+  * @param arg Name of the case object (or class) e.g. case object Thing means you need "Thing"
   * @param map Parameters e.g. case class Thing(valueA: String) means you need Map("valueA" -> "<anything>")
   * @return
   */
@@ -19,17 +19,21 @@ def valueOfImpl[T: Type](arg: Expr[String], m: Expr[Map[String, Any]])(using Quo
   import quotes.reflect.*
   val tpe = TypeRepr.of[T]
   def getCaseClassesRecursive(sym: Symbol): List[Symbol] =
-    if sym.isClassDef && sym.flags.is(Flags.Case) then List(sym)
+    // case classes and objects
+    if sym.isClassDef && sym.flags.is(Flags.Case) || sym.flags.is(Flags.Module) then List(sym)
     else sym.children.flatMap(getCaseClassesRecursive)
   val cases = getCaseClassesRecursive(tpe.typeSymbol)
   def strExpr(f: String) = Literal(StringConstant(f)).asExprOf[String]
 
   def symbolInitExpr(sym: Symbol) = {
-    val tpeExpr = TypeIdent(sym)
-    val ctorSym = sym.primaryConstructor
-    val initFields = sym.caseFields.map(f => '{ $m(${ strExpr(f.name) }) }.asTerm)
-    val newExpr = Apply(Select(New(tpeExpr), ctorSym), initFields)
-    newExpr.asExprOf[T]
+    if sym.flags.is(Flags.Module) then
+      Ident(sym.termRef).asExprOf[T]
+    else
+      val tpeExpr = TypeIdent(sym)
+      val ctorSym = sym.primaryConstructor
+      val initFields = sym.caseFields.map(f => '{ $m(${ strExpr(f.name) }) }.asTerm)
+      val newExpr = Apply(Select(New(tpeExpr), ctorSym), initFields)
+      newExpr.asExprOf[T]
   }
 
   def matchCaseReducer(acc: Expr[Option[T]], child: Symbol): Expr[Option[T]] = {
