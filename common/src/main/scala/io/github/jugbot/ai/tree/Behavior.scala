@@ -1,5 +1,6 @@
 package io.github.jugbot.ai.tree
 
+import com.google.common.collect.ImmutableSet
 import io.github.jugbot.ai.{BehaviorFailure, BehaviorRunning, BehaviorStatus, BehaviorSuccess}
 import io.github.jugbot.entity.{FaeEntity, RandomTickingEntity}
 import io.github.jugbot.extension.AABB.*
@@ -12,15 +13,17 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.{SoundEvents, SoundSource}
 import net.minecraft.tags.BlockTags
 import net.minecraft.world.InteractionHand
+import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.ai.village.poi.PoiTypes
 import net.minecraft.world.entity.player.Player
-import net.minecraft.world.entity.{EquipmentSlot, Mob}
 import net.minecraft.world.item.{BlockItem, ItemStack}
+import net.minecraft.world.level.PathNavigationRegion
 import net.minecraft.world.level.block.BedBlock
 import net.minecraft.world.level.block.entity.{BlockEntityType, ChestBlockEntity}
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.pattern.BlockInWorld
 import net.minecraft.world.level.gameevent.GameEvent
+import net.minecraft.world.level.pathfinder.{PathFinder, WalkNodeEvaluator}
 import net.minecraft.world.level.storage.loot.LootParams
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams
 
@@ -136,11 +139,11 @@ object TargetingBehavior {
       )
 }
 
-sealed trait NavigationBehavior extends Behavior[Mob, Blackboard]
+sealed trait NavigationBehavior extends Behavior[FaeEntity, Blackboard]
 
 object NavigationBehavior {
   case class is_at_location(target: String) extends NavigationBehavior:
-    override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       state.get(target) match {
         case Some(blockPos: BlockPos)
             if blockPos.closerToCenterThan(actor.position, FaeEntity.NAVIGATION_PROXIMITY + 1) =>
@@ -149,20 +152,20 @@ object NavigationBehavior {
       }
 
   case class nav_ended() extends NavigationBehavior:
-    override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       if actor.getNavigation.isDone then BehaviorSuccess else BehaviorFailure
 
   case class reset_nav() extends NavigationBehavior:
-    override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       actor.getNavigation.stop()
       BehaviorSuccess
   case class resolve_nav() extends NavigationBehavior:
-    override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       val success = actor.getNavigation.getPath.canReach
       actor.getNavigation.stop()
       if success then BehaviorSuccess else BehaviorFailure
   case class has_nav_path_to(target: String) extends NavigationBehavior:
-    override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       val currentTarget = Option(actor.getNavigation.getPath).map(path => path.getTarget)
       (state.get(target), currentTarget) match {
         case (Some(posA: BlockPos), Some(posB: BlockPos))
@@ -171,21 +174,39 @@ object NavigationBehavior {
         case _ => BehaviorFailure
       }
   case class create_nav_path_to(target: String) extends NavigationBehavior:
-    override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
+    private val nodeEvaluator = new WalkNodeEvaluator
+    nodeEvaluator.setCanPassDoors(true)
+    nodeEvaluator.setCanOpenDoors(true)
+    private val pathFinder = new PathFinder(this.nodeEvaluator, (FaeEntity.FOLLOW_RANGE * 16).toInt)
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       state.get(target) match {
         case Some(blockPos: BlockPos) =>
           actor.getNavigation.stop()
-          val path = actor.getNavigation.createPath(blockPos, FaeEntity.NAVIGATION_PROXIMITY)
+          val (minVec, maxVec) = actor.settlementZone.get.getBoundingBox.toBoundingBox.boundingCorners
+          actor.level.getProfiler.push("custom_pathfind")
+          val pathNavigationRegion: PathNavigationRegion =
+            new PathNavigationRegion(actor.level, BlockPos(minVec), BlockPos(maxVec))
+          val reachRange = FaeEntity.NAVIGATION_PROXIMITY
+          val maxVisitedNodesMultiplier = 16f
+          // TODO: Use mixins to allow for custom pathfinding in a safer way
+          val path = pathFinder.findPath(pathNavigationRegion,
+                                         actor,
+                                         ImmutableSet.of(blockPos),
+                                         FaeEntity.FOLLOW_RANGE * 16,
+                                         reachRange,
+                                         maxVisitedNodesMultiplier
+          )
+          actor.level.getProfiler.pop()
           if path != null && path.canReach && actor.getNavigation.moveTo(path, 1)
           then BehaviorSuccess
           else BehaviorFailure
         case _ => BehaviorFailure
       }
   case class current_path_unobstructed() extends NavigationBehavior:
-    override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       if actor.getNavigation.isStuck then BehaviorFailure else BehaviorSuccess
   case class move_along_current_path() extends NavigationBehavior:
-    override def execute(actor: Mob, state: Blackboard): BehaviorStatus =
+    override def execute(actor: FaeEntity, state: Blackboard): BehaviorStatus =
       val nav = actor.getNavigation
       if nav.isInProgress then
         nav.tick()

@@ -134,6 +134,7 @@ object FaeEntity {
   val TEMP_SEARCH_RADIUS = 64
   val BRUTE_FORCE_SEARCH_RADIUS = 12
   val BRUTE_FORCE_SEARCH_ATTEMPTS = 20
+  val FOLLOW_RANGE = 20f
 
   final val TYPE: Supplier[EntityType[FaeEntity]] = Suppliers.memoize(() =>
     EntityType.Builder
@@ -147,6 +148,6 @@ object FaeEntity {
       .createLivingAttributes()
       .add(Attributes.MAX_HEALTH, 10.0)
       .add(Attributes.MOVEMENT_SPEED, 0.3f)
-      .add(Attributes.FOLLOW_RANGE, 20f)
+      .add(Attributes.FOLLOW_RANGE, FOLLOW_RANGE)
 
 }

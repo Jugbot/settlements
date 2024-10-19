@@ -60,6 +60,8 @@ object BoundingBox {
       new Vec3i(bb.maxX, bb.maxY, bb.maxZ)
     )
 
+    def boundingCorners: (Vec3i, Vec3i) = (new Vec3i(bb.minX, bb.minY, bb.minZ), new Vec3i(bb.maxX, bb.maxY, bb.maxZ))
+
     def contains(other: BoundingBox): Boolean = {
       val corners = other.corners
       corners.forall(bb.isInside)
