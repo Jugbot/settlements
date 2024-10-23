@@ -33,8 +33,8 @@ class SettlementZoneEntity(entityType: EntityType[SettlementZoneEntity], world: 
     getShrine match {
       case Some(shrine) =>
         shrine.tier match {
-          case 0 => 1
-          case 1 => 2
+          case 0 => 3
+          case 1 => 9
           case 2 => 15
           case 3 => 20
           case _ => 0

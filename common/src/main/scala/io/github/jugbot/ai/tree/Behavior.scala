@@ -62,8 +62,8 @@ sealed trait TargetingBehavior extends Behavior[FaeEntity, Blackboard]
 
 object TargetingBehavior {
 
-  // Arbitrary limit to the # of blocks searched per tick
-  private val MAX_SEARCH_PER_TICK = 1024
+  // Arbitrary limit to the # of blocks searched per tick, per entity
+  private val MAX_SEARCH_PER_TICK = 128
 
   /**
    * Attempts to search for a block within a radius.
@@ -84,8 +84,8 @@ object TargetingBehavior {
       return BehaviorSuccess
     blackboard.remove(key) match {
       case Some(progress) =>
-        val remaining = progress.asInstanceOf[Iterator[Option[Vec3i]]]
-        val batch = remaining.take(MAX_SEARCH_PER_TICK).flatten.toList
+        val remaining = progress.asInstanceOf[Iterator[Vec3i]]
+        val batch = remaining.take(MAX_SEARCH_PER_TICK).toList
         val maybeBlockPos = batch
           .map(BlockPos(_))
           .find(predicate)

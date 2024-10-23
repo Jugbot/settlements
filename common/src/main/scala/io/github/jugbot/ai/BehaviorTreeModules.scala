@@ -9,8 +9,13 @@ type ParameterizedAction = (String, Parameters)
 type ParameterizedNode = Node[ParameterizedAction]
 type References = Map[String, ParameterizedNode]
 
-case class BehaviorLog(name: String, args: Map[String, String], result: BehaviorStatus, isModule: Boolean) {
-  override def toString: String = f"$name($args) => $result"
+case class BehaviorLog(name: String,
+                       args: Map[String, String],
+                       result: BehaviorStatus,
+                       isModule: Boolean,
+                       depth: Int = 0
+) {
+  override def toString: String = f"${" " * depth}$name($args) => $result"
 }
 
 /**
@@ -24,6 +29,7 @@ def runModules(root: ParameterizedNode,
                references: References = Map.empty
 ): Seq[BehaviorLog] = {
   val log = mutable.Buffer.empty[BehaviorLog]
+  var depth = 0
   def cb(name: String, parameters: Parameters, context: Parameters): BehaviorStatus = {
     val hydratedParams = parameters.map { (key, value) =>
       value match {
@@ -34,10 +40,14 @@ def runModules(root: ParameterizedNode,
     val index = log.size
     log.append(null)
     val status = references.get(name) match {
-      case Some(n) => run(n, cb(_, _, hydratedParams))
-      case None    => perform(name, hydratedParams)
+      case Some(n) =>
+        depth += 1
+        val status = run(n, cb(_, _, hydratedParams))
+        depth -= 1
+        status
+      case None => perform(name, hydratedParams)
     }
-    log.update(index, BehaviorLog(name, hydratedParams, status, references.contains(name)))
+    log.update(index, BehaviorLog(name, hydratedParams, status, references.contains(name), depth))
     status
   }
 
